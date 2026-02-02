@@ -21,10 +21,12 @@ const AUTH_CONFIG = {
     'offline_access',
     'User.Read',
     'Mail.Read',
+    'Mail.ReadWrite',
     'Mail.Send',
     'Calendars.Read',
     'Calendars.ReadWrite',
-    'Contacts.Read'
+    'Contacts.Read',
+    'MailboxSettings.ReadWrite'
   ],
   tokenStorePath: path.join(process.env.HOME || process.env.USERPROFILE, '.outlook-mcp-tokens.json')
 };
