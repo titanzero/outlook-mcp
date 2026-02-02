@@ -45,8 +45,19 @@ async function handleListEvents(args) {
       const startDate = new Date(event.start.dateTime).toLocaleString(event.start.timeZone);
       const endDate = new Date(event.end.dateTime).toLocaleString(event.end.timeZone);
       const location = event.location.displayName || 'No location';
-      
-      return `${index + 1}. ${event.subject} - Location: ${location}\nStart: ${startDate}\nEnd: ${endDate}\nSubject: ${event.subject}\nSummary: ${event.bodyPreview}\nID: ${event.id}\n`;
+
+      // Format attendees list
+      let attendeesStr = '';
+      if (event.attendees && event.attendees.length > 0) {
+        const attendeeNames = event.attendees.map(a => {
+          const name = a.emailAddress?.name || a.emailAddress?.address || 'Unknown';
+          const status = a.status?.response || '';
+          return status ? `${name} (${status})` : name;
+        });
+        attendeesStr = `\nAttendees: ${attendeeNames.join(', ')}`;
+      }
+
+      return `${index + 1}. ${event.subject} - Location: ${location}\nStart: ${startDate}\nEnd: ${endDate}${attendeesStr}\nSummary: ${event.bodyPreview}\nID: ${event.id}\n`;
     }).join("\n");
     
     return {
