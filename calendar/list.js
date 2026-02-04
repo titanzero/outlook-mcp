@@ -27,10 +27,12 @@ async function handleListEvents(args) {
     endDate.setDate(endDate.getDate() + 90);
     const endDateTime = endDate.toISOString();
 
-    let endpoint = `me/calendarView?startDateTime=${encodeURIComponent(startDateTime)}&endDateTime=${encodeURIComponent(endDateTime)}`;
+    const endpoint = 'me/calendarView';
 
-    // Add query parameters
+    // Add query parameters - calendarView requires startDateTime and endDateTime
     const queryParams = {
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
       $top: count,
       $orderby: 'start/dateTime',
       $select: config.CALENDAR_SELECT_FIELDS
