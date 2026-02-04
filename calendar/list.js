@@ -12,22 +12,30 @@ const { ensureAuthenticated } = require('../auth');
  */
 async function handleListEvents(args) {
   const count = Math.min(args.count || 10, config.MAX_RESULT_COUNT);
-  
+
   try {
     // Get access token
     const accessToken = await ensureAuthenticated();
-    
-    // Build API endpoint
-    let endpoint = 'me/events';
-    
+
+    // Use calendarView endpoint to properly include all-day events
+    // The me/events endpoint with dateTime filter excludes all-day events
+    // because they use date-only format (e.g., "2026-02-04") instead of ISO timestamps
+    const now = new Date();
+    const startDateTime = now.toISOString();
+    // Look ahead 90 days by default
+    const endDate = new Date(now);
+    endDate.setDate(endDate.getDate() + 90);
+    const endDateTime = endDate.toISOString();
+
+    let endpoint = `me/calendarView?startDateTime=${encodeURIComponent(startDateTime)}&endDateTime=${encodeURIComponent(endDateTime)}`;
+
     // Add query parameters
     const queryParams = {
       $top: count,
       $orderby: 'start/dateTime',
-      $filter: `start/dateTime ge '${new Date().toISOString()}'`,
       $select: config.CALENDAR_SELECT_FIELDS
     };
-    
+
     // Make API call
     const response = await callGraphAPI(accessToken, 'GET', endpoint, null, queryParams);
     
@@ -42,9 +50,30 @@ async function handleListEvents(args) {
     
     // Format results
     const eventList = response.value.map((event, index) => {
-      const startDate = new Date(event.start.dateTime).toLocaleString(event.start.timeZone);
-      const endDate = new Date(event.end.dateTime).toLocaleString(event.end.timeZone);
-      const location = event.location.displayName || 'No location';
+      let startDate, endDate;
+
+      // Handle all-day events differently - they use date-only format
+      if (event.isAllDay) {
+        // All-day events: just show the date(s)
+        startDate = event.start.dateTime.split('T')[0];
+        endDate = event.end.dateTime.split('T')[0];
+        // For single-day all-day events, end date is next day in Graph API
+        const startD = new Date(startDate);
+        const endD = new Date(endDate);
+        if ((endD - startD) / (1000 * 60 * 60 * 24) === 1) {
+          // Single day all-day event
+          startDate = `${startDate} (All Day)`;
+          endDate = startDate;
+        } else {
+          startDate = `${startDate} (All Day)`;
+          endDate = `${event.end.dateTime.split('T')[0]} (All Day)`;
+        }
+      } else {
+        startDate = new Date(event.start.dateTime).toLocaleString(event.start.timeZone);
+        endDate = new Date(event.end.dateTime).toLocaleString(event.end.timeZone);
+      }
+
+      const location = event.location?.displayName || 'No location';
 
       // Format attendees list
       let attendeesStr = '';
