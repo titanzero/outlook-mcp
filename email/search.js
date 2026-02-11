@@ -12,7 +12,7 @@ const { resolveFolderPath } = require('./folder-utils');
  * @returns {object} - MCP response
  */
 async function handleSearchEmails(args) {
-  const folder = args.folder || "inbox";
+  const folder = args.folder || null;
   const requestedCount = args.count || 10;
   const query = args.query || '';
   const from = args.from || '';
@@ -20,14 +20,17 @@ async function handleSearchEmails(args) {
   const subject = args.subject || '';
   const hasAttachments = args.hasAttachments;
   const unreadOnly = args.unreadOnly;
-  
+
   try {
     // Get access token
     const accessToken = await ensureAuthenticated();
-    
-    // Resolve the folder path
-    const endpoint = await resolveFolderPath(accessToken, folder);
-    console.error(`Using endpoint: ${endpoint} for folder: ${folder}`);
+
+    // If no folder specified, search across all folders (me/messages)
+    // This includes inbox, archive, sent items, etc.
+    const endpoint = folder
+      ? await resolveFolderPath(accessToken, folder)
+      : 'me/messages';
+    console.error(`Using endpoint: ${endpoint} for folder: ${folder || 'all'}`);
     
     // Execute progressive search with pagination
     const response = await progressiveSearch(

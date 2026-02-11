@@ -30,7 +30,7 @@ const emailTools = [
   },
   {
     name: "search-emails",
-    description: "Search for emails using various criteria",
+    description: "Search for emails using various criteria. Searches across ALL folders (inbox, archive, sent, etc.) by default. Specify folder to limit scope.",
     inputSchema: {
       type: "object",
       properties: {
@@ -40,7 +40,7 @@ const emailTools = [
         },
         folder: {
           type: "string",
-          description: "Email folder to search in (default: 'inbox')"
+          description: "Email folder to search in (default: all folders). Use 'inbox', 'archive', 'sent', etc. to limit scope."
         },
         from: {
           type: "string",
