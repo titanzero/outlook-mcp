@@ -116,7 +116,8 @@ async function progressiveSearch(endpoint, accessToken, searchTerms, filterTerms
           if (term === 'query') {
             simplifiedParams.$search = `"${searchTerms[term]}"`;
           } else {
-            simplifiedParams.$search = `${term}:"${searchTerms[term]}"`;
+            // Wrap entire KQL expression in outer quotes as required by Graph API
+            simplifiedParams.$search = `"${term}:${searchTerms[term]}"`;
           }
 
           addBooleanFilters(simplifiedParams, filterTerms);
@@ -178,27 +179,30 @@ function buildSearchParams(searchTerms, filterTerms, count) {
   };
 
   // Build KQL search terms
+  // Graph API requires the entire $search value wrapped in double quotes:
+  //   $search="from:user@example.com subject:meeting"
   const kqlTerms = [];
 
   if (searchTerms.query) {
-    kqlTerms.push(`"${searchTerms.query}"`);
+    kqlTerms.push(searchTerms.query);
   }
 
   if (searchTerms.subject) {
-    kqlTerms.push(`subject:"${searchTerms.subject}"`);
+    kqlTerms.push(`subject:${searchTerms.subject}`);
   }
 
   if (searchTerms.from) {
-    kqlTerms.push(`from:"${searchTerms.from}"`);
+    kqlTerms.push(`from:${searchTerms.from}`);
   }
 
   if (searchTerms.to) {
-    kqlTerms.push(`to:"${searchTerms.to}"`);
+    kqlTerms.push(`to:${searchTerms.to}`);
   }
 
   if (kqlTerms.length > 0) {
     // $search and $orderby cannot be used together on messages endpoint
-    params.$search = kqlTerms.join(' ');
+    // Wrap entire KQL expression in double quotes as required by Graph API
+    params.$search = `"${kqlTerms.join(' ')}"`;
   } else {
     // No search terms — safe to use $orderby
     params.$orderby = 'receivedDateTime desc';
