@@ -4,7 +4,7 @@ const url = require('url');
 const querystring = require('querystring');
 const https = require('https');
 const fs = require('fs');
-const path = require('path');
+const config = require('./config');
 
 // Load environment variables from .env file
 require('dotenv').config();
@@ -13,22 +13,19 @@ require('dotenv').config();
 console.log('Starting Outlook Authentication Server');
 
 // Authentication configuration
+const parsedScopes = (process.env.OUTLOOK_SCOPES || '').split(/\s+/).filter(Boolean);
+const envScopes = parsedScopes.length > 0 ? parsedScopes : null;
+
 const AUTH_CONFIG = {
-  clientId: process.env.MS_CLIENT_ID || '', // Set your client ID as an environment variable
-  clientSecret: process.env.MS_CLIENT_SECRET || '', // Set your client secret as an environment variable
-  redirectUri: 'http://localhost:3333/auth/callback',
-  scopes: [
-    'offline_access',
-    'User.Read',
-    'Mail.Read',
-    'Mail.ReadWrite',
-    'Mail.Send',
-    'Calendars.Read',
-    'Calendars.ReadWrite',
-    'Contacts.Read',
-    'MailboxSettings.ReadWrite'
-  ],
-  tokenStorePath: path.join(process.env.HOME || process.env.USERPROFILE, '.outlook-mcp-tokens.json')
+  clientId: process.env.OUTLOOK_CLIENT_ID || config.AUTH_CONFIG.clientId || '',
+  clientSecret: process.env.OUTLOOK_CLIENT_SECRET || config.AUTH_CONFIG.clientSecret || '',
+  redirectUri: process.env.OUTLOOK_REDIRECT_URI || config.AUTH_CONFIG.redirectUri,
+  scopes: envScopes || config.AUTH_CONFIG.scopes,
+  // Use the same token store path as the MCP server so both
+  // processes always read/write the same JSON file.
+  tokenStorePath: config.getTokenStorePath(),
+  authEndpoint: config.AUTH_ENDPOINT,
+  tokenEndpoint: config.TOKEN_ENDPOINT
 };
 
 // Create HTTP server
@@ -165,8 +162,8 @@ const server = http.createServer((req, res) => {
             <div class="error-box">
               <p>Microsoft Graph API credentials are not set. Please set the following environment variables:</p>
               <ul>
-                <li><code>MS_CLIENT_ID</code></li>
-                <li><code>MS_CLIENT_SECRET</code></li>
+                <li><code>OUTLOOK_CLIENT_ID</code></li>
+                <li><code>OUTLOOK_CLIENT_SECRET</code></li>
               </ul>
             </div>
           </body>
@@ -189,7 +186,7 @@ const server = http.createServer((req, res) => {
       state: Date.now().toString() // Simple state parameter for security
     };
     
-    const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${querystring.stringify(authParams)}`;
+    const authUrl = `${AUTH_CONFIG.authEndpoint}?${querystring.stringify(authParams)}`;
     console.log(`Redirecting to: ${authUrl}`);
     
     // Redirect to Microsoft's login page
@@ -214,7 +211,7 @@ const server = http.createServer((req, res) => {
           <div class="info-box">
             <p>This server is running to handle Microsoft Graph API authentication callbacks.</p>
             <p>Don't navigate here directly. Instead, use the <code>authenticate</code> tool in Claude to start the authentication process.</p>
-            <p>Make sure you've set the <code>MS_CLIENT_ID</code> and <code>MS_CLIENT_SECRET</code> environment variables.</p>
+            <p>Make sure you've set the <code>OUTLOOK_CLIENT_ID</code> and <code>OUTLOOK_CLIENT_SECRET</code> environment variables.</p>
           </div>
           <p>Server is running at http://localhost:3333</p>
         </body>
@@ -238,9 +235,12 @@ function exchangeCodeForTokens(code) {
       scope: AUTH_CONFIG.scopes.join(' ')
     });
     
+    const tokenUrl = new URL(AUTH_CONFIG.tokenEndpoint);
     const options = {
-      hostname: 'login.microsoftonline.com',
-      path: '/common/oauth2/v2.0/token',
+      protocol: tokenUrl.protocol,
+      hostname: tokenUrl.hostname,
+      port: tokenUrl.port || undefined,
+      path: `${tokenUrl.pathname}${tokenUrl.search || ''}`,
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -298,7 +298,7 @@ server.listen(PORT, () => {
   
   if (!AUTH_CONFIG.clientId || !AUTH_CONFIG.clientSecret) {
     console.log('\n⚠️  WARNING: Microsoft Graph API credentials are not set.');
-    console.log('   Please set the MS_CLIENT_ID and MS_CLIENT_SECRET environment variables.');
+    console.log('   Please set the OUTLOOK_CLIENT_ID and OUTLOOK_CLIENT_SECRET environment variables.');
   }
 });
 

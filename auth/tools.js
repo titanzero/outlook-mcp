@@ -3,18 +3,16 @@
  */
 const config = require('../config');
 const tokenManager = require('./token-manager');
+const { makeErrorResponse, makeResponse } = require('../utils/response-helpers');
 
 /**
  * About tool handler
  * @returns {object} - MCP response
  */
 async function handleAbout() {
-  return {
-    content: [{
-      type: "text",
-      text: `📧 MODULAR Outlook Assistant MCP Server v${config.SERVER_VERSION} 📧\n\nProvides access to Microsoft Outlook email, calendar, and contacts through Microsoft Graph API.\nImplemented with a modular architecture for improved maintainability.`
-    }]
-  };
+  return makeResponse(
+    `📧 MODULAR Outlook Assistant MCP Server v${config.SERVER_VERSION} 📧\n\nProvides access to Microsoft Outlook email, calendar, and contacts through Microsoft Graph API.\nPowered by the official Microsoft Graph JavaScript SDK.`
+  );
 }
 
 /**
@@ -24,29 +22,26 @@ async function handleAbout() {
  */
 async function handleAuthenticate(args) {
   const force = args && args.force === true;
-  
-  // For test mode, create a test token
-  if (config.USE_TEST_MODE) {
-    // Create a test token with a 1-hour expiry
-    tokenManager.createTestTokens();
-    
-    return {
-      content: [{
-        type: "text",
-        text: 'Successfully authenticated with Microsoft Graph API (test mode)'
-      }]
-    };
+
+  try {
+    if (force) {
+      await tokenManager.clearTokens();
+    }
+
+    if (!config.AUTH_CONFIG.clientId) {
+      return makeErrorResponse(
+        'Authentication configuration is missing. Set OUTLOOK_CLIENT_ID and OUTLOOK_CLIENT_SECRET, then restart Claude and try again.'
+      );
+    }
+
+    const authUrl = `${config.AUTH_CONFIG.authServerUrl}/auth?client_id=${encodeURIComponent(config.AUTH_CONFIG.clientId)}`;
+    const prefix = force ? 'Existing tokens were cleared. ' : '';
+    return makeResponse(
+      `${prefix}Authentication required. Please visit the following URL to authenticate with Microsoft: ${authUrl}\n\nAfter authentication, you will be redirected back to this application.`
+    );
+  } catch (error) {
+    return makeErrorResponse(`Error starting authentication flow: ${error.message}`);
   }
-  
-  // For real authentication, generate an auth URL and instruct the user to visit it
-  const authUrl = `${config.AUTH_CONFIG.authServerUrl}/auth?client_id=${config.AUTH_CONFIG.clientId}`;
-  
-  return {
-    content: [{
-      type: "text",
-      text: `Authentication required. Please visit the following URL to authenticate with Microsoft: ${authUrl}\n\nAfter authentication, you will be redirected back to this application.`
-    }]
-  };
 }
 
 /**
@@ -56,24 +51,20 @@ async function handleAuthenticate(args) {
 async function handleCheckAuthStatus() {
   console.error('[CHECK-AUTH-STATUS] Starting authentication status check');
   
-  const tokens = tokenManager.loadTokenCache();
+  const tokens = tokenManager.loadTokenCacheSync();
   
   console.error(`[CHECK-AUTH-STATUS] Tokens loaded: ${tokens ? 'YES' : 'NO'}`);
   
   if (!tokens || !tokens.access_token) {
     console.error('[CHECK-AUTH-STATUS] No valid access token found');
-    return {
-      content: [{ type: "text", text: "Not authenticated" }]
-    };
+    return makeResponse('Not authenticated');
   }
   
   console.error('[CHECK-AUTH-STATUS] Access token present');
   console.error(`[CHECK-AUTH-STATUS] Token expires at: ${tokens.expires_at}`);
   console.error(`[CHECK-AUTH-STATUS] Current time: ${Date.now()}`);
   
-  return {
-    content: [{ type: "text", text: "Authenticated and ready" }]
-  };
+  return makeResponse('Authenticated and ready');
 }
 
 // Tool definitions

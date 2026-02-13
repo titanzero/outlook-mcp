@@ -1,9 +1,7 @@
-const express = require('express');
 const querystring = require('querystring');
-const https = require('https');
-const fs = require('fs');
-const crypto = require('crypto'); // Added for generating random string
-const TokenStorage = require('./token-storage'); // Assuming TokenStorage is in the same directory
+const crypto = require('crypto');
+const tokenManager = require('./token-manager');
+const config = require('../config');
 
 // HTML templates
 function escapeHtml(unsafe) {
@@ -51,41 +49,30 @@ const templates = {
     </html>`
 };
 
-function createAuthConfig(envPrefix = 'MS_') {
+function createAuthConfig() {
+  const parsedScopes = (process.env.OUTLOOK_SCOPES || '').split(/\s+/).filter(Boolean);
+  const envScopes = parsedScopes.length > 0 ? parsedScopes : null;
+
   return {
-    clientId: process.env[`${envPrefix}CLIENT_ID`] || '',
-    clientSecret: process.env[`${envPrefix}CLIENT_SECRET`] || '',
-    redirectUri: process.env[`${envPrefix}REDIRECT_URI`] || 'http://localhost:3333/auth/callback',
-    scopes: (process.env[`${envPrefix}SCOPES`] || 'offline_access User.Read Mail.Read').split(' '),
-    tokenEndpoint: process.env[`${envPrefix}TOKEN_ENDPOINT`] || 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
-    authEndpoint: process.env[`${envPrefix}AUTH_ENDPOINT`] || 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize'
+    clientId: process.env.OUTLOOK_CLIENT_ID || config.AUTH_CONFIG.clientId || '',
+    clientSecret: process.env.OUTLOOK_CLIENT_SECRET || config.AUTH_CONFIG.clientSecret || '',
+    redirectUri: process.env.OUTLOOK_REDIRECT_URI || config.AUTH_CONFIG.redirectUri,
+    scopes: envScopes || [...config.AUTH_CONFIG.scopes],
+    tokenEndpoint: config.TOKEN_ENDPOINT,
+    authEndpoint: config.AUTH_ENDPOINT
   };
 }
 
-function setupOAuthRoutes(app, tokenStorage, authConfig, envPrefix = 'MS_') {
+function setupOAuthRoutes(app, authConfig) {
   if (!authConfig) {
-    authConfig = createAuthConfig(envPrefix);
+    authConfig = createAuthConfig();
   }
-
-  if (!(tokenStorage instanceof TokenStorage)) {
-    console.error("Error: tokenStorage is not an instance of TokenStorage. OAuth routes will not function correctly.");
-    // Optionally, you could throw an error here or disable the routes
-    // throw new Error("Invalid tokenStorage provided to setupOAuthRoutes");
-  }
-
 
   app.get('/auth', (req, res) => {
     if (!authConfig.clientId) {
       return res.status(500).send(templates.authError('Configuration Error', 'Client ID is not configured.'));
     }
-    const state = crypto.randomBytes(16).toString('hex'); // Generate a random 16-byte string
-    // Store state in session or similar mechanism if available.
-    // For a server without sessions, this state would need to be passed through and verified differently,
-    // or a temporary server-side storage (like a short-lived cache) would be needed.
-    // For this example, we'll assume session middleware is configured elsewhere if this were a full app.
-    // If using express-session: req.session.oauthState = state;
-    // Since this is a module, actual session handling is outside its direct scope,
-    // but it's crucial for the consuming application to handle state verification.
+    const state = crypto.randomBytes(16).toString('hex');
 
     const authorizationUrl = `${authConfig.authEndpoint}?` +
       querystring.stringify({
@@ -102,40 +89,10 @@ function setupOAuthRoutes(app, tokenStorage, authConfig, envPrefix = 'MS_') {
   app.get('/auth/callback', async (req, res) => {
     const { code, error, error_description, state } = req.query;
 
-    // IMPORTANT: State validation is crucial for CSRF protection.
-    // The application using this module MUST implement a way to store the 'state' generated in /auth
-    // (e.g., in a user session if using express-session, or a short-lived cache)
-    // and then verify it here against the 'state' received from the OAuth provider.
-    // For example, if using express-session:
-    // const savedState = req.session.oauthState;
-    // if (!state || state !== savedState) {
-    //   console.error("OAuth callback state mismatch. Potential CSRF attack.");
-    //   return res.status(400).send(templates.authError('Invalid State', 'CSRF token mismatch. Please try authenticating again.'));
-    // }
-    // delete req.session.oauthState; // Clean up session state
-
-    // Since this module itself doesn't manage sessions, we'll log a warning if state is missing,
-    // but actual enforcement must be done by the consuming application.
-    // The Gemini review recommended uncommenting the rejection.
-    // However, the consuming app (CLI or server) is responsible for session/state storage.
-    // This module *cannot* validate state if it wasn't involved in storing it.
-    // The PR author (ranxian) needs to implement state storage & validation in the calling server (sse-server.js or outlook-auth-server.js).
-    // For now, enforcing a missing state here would break flows where state *is* passed but not validated by *this specific module*.
-    // The best this module can do is check for presence and rely on the consumer to validate the actual value.
-    // The original PR #10's outlook-auth-server.js used Date.now() and didn't store/validate it beyond this.
-    // The new sse-server.js also doesn't show session management for state.
-    // So, we will make the check for presence mandatory as per Gemini's suggestion.
     if (!state) {
         console.error("OAuth callback received without a 'state' parameter. Rejecting request to prevent potential CSRF attack.");
         return res.status(400).send(templates.authError('Missing State Parameter', 'The state parameter was missing from the OAuth callback. This is a security risk. Please try authenticating again.'));
     }
-    // Further validation of the state's VALUE (e.g., req.session.oauthState === state) is the responsibility
-    // of the application integrating this module, as session management is outside this module's scope.
-    // if (req.session && req.session.oauthState !== state) {
-    //    return res.status(400).send(templates.authError('Invalid State Parameter', 'CSRF detected. State mismatch.'));
-    // }
-    // if (req.session) delete req.session.oauthState;
-
 
     if (error) {
       return res.status(400).send(templates.authError(error, error_description));
@@ -146,7 +103,7 @@ function setupOAuthRoutes(app, tokenStorage, authConfig, envPrefix = 'MS_') {
     }
 
     try {
-      await tokenStorage.exchangeCodeForTokens(code);
+      await tokenManager.exchangeCodeForTokens(code);
       res.send(templates.authSuccess);
     } catch (exchangeError) {
       console.error('Token exchange error:', exchangeError);
@@ -156,9 +113,9 @@ function setupOAuthRoutes(app, tokenStorage, authConfig, envPrefix = 'MS_') {
 
   app.get('/token-status', async (req, res) => {
     try {
-      const token = await tokenStorage.getValidAccessToken();
+      const token = await tokenManager.getAccessToken();
       if (token) {
-        const expiryDate = new Date(tokenStorage.getExpiryTime());
+        const expiryDate = new Date(tokenManager.getExpiryTime());
         res.send(templates.tokenStatus(`Access token is valid. Expires at: ${expiryDate.toLocaleString()}`));
       } else {
         res.send(templates.tokenStatus('No valid access token found. Please authenticate.'));
@@ -172,7 +129,4 @@ function setupOAuthRoutes(app, tokenStorage, authConfig, envPrefix = 'MS_') {
 module.exports = {
   setupOAuthRoutes,
   createAuthConfig,
-  // Exporting templates for potential direct use or testing, though not typical
-  // templates
 };
-// Adding a newline at the end of the file as requested by Gemini Code Assist
