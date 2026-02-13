@@ -1,8 +1,30 @@
 /**
  * List folders functionality
+ * Uses getAllFolders from email/folder-utils for recursive folder discovery.
  */
-const { callGraphAPI } = require('../utils/graph-api');
-const { ensureAuthenticated } = require('../auth');
+const { getAllFolders } = require('../email/folder-utils');
+const { formatResponse } = require('../utils/response-formatter');
+const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
+
+/**
+ * Build structured rows for TOON encoding.
+ * @param {Array} folders - Folder objects from getAllFolders()
+ * @param {boolean} includeItemCounts - Whether to include item counts
+ * @returns {Array<object>}
+ */
+function buildFolderRows(folders, includeItemCounts) {
+  return folders.map(folder => {
+    const row = {
+      name: folder.displayName,
+      path: folder.path || folder.displayName,
+    };
+    if (includeItemCounts) {
+      row.total = folder.totalItemCount || 0;
+      row.unread = folder.unreadItemCount || 0;
+    }
+    return row;
+  });
+}
 
 /**
  * List folders handler
@@ -14,117 +36,28 @@ async function handleListFolders(args) {
   const includeChildren = args.includeChildren === true;
   
   try {
-    // Get access token
-    const accessToken = await ensureAuthenticated();
-    
-    // Get all mail folders
-    const folders = await getAllFoldersHierarchy(accessToken, includeItemCounts);
-    
-    // If including children, format as hierarchy
-    if (includeChildren) {
-      return {
-        content: [{ 
-          type: "text", 
-          text: formatFolderHierarchy(folders, includeItemCounts)
-        }]
-      };
-    } else {
-      // Otherwise, format as flat list
-      return {
-        content: [{ 
-          type: "text", 
-          text: formatFolderList(folders, includeItemCounts)
-        }]
-      };
-    }
-  } catch (error) {
-    if (error.message === 'Authentication required') {
-      return {
-        content: [{ 
-          type: "text", 
-          text: "Authentication required. Please use the 'authenticate' tool first."
-        }]
-      };
-    }
-    
-    return {
-      content: [{ 
-        type: "text", 
-        text: `Error listing folders: ${error.message}`
-      }]
-    };
-  }
-}
+    // Get all mail folders recursively (with path info)
+    const folders = await getAllFolders();
 
-/**
- * Get all mail folders with hierarchy information
- * @param {string} accessToken - Access token
- * @param {boolean} includeItemCounts - Include item counts in response
- * @returns {Promise<Array>} - Array of folder objects with hierarchy
- */
-async function getAllFoldersHierarchy(accessToken, includeItemCounts) {
-  try {
-    // Determine select fields based on whether to include counts
-    const selectFields = includeItemCounts
-      ? 'id,displayName,parentFolderId,childFolderCount,totalItemCount,unreadItemCount'
-      : 'id,displayName,parentFolderId,childFolderCount';
-    
-    // Get all mail folders
-    const response = await callGraphAPI(
-      accessToken,
-      'GET',
-      'me/mailFolders',
-      null,
-      { 
-        $top: 100,
-        $select: selectFields
-      }
+    if (!folders || folders.length === 0) {
+      return makeResponse('No folders found.');
+    }
+
+    const textFallback = includeChildren
+      ? formatFolderHierarchy(folders, includeItemCounts)
+      : formatFolderList(folders, includeItemCounts);
+
+    const text = formatResponse(
+      { folders: buildFolderRows(folders, includeItemCounts) },
+      textFallback
     );
-    
-    if (!response.value) {
-      return [];
+    return makeResponse(text);
+  } catch (error) {
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
     }
     
-    // Get child folders for folders with children
-    const foldersWithChildren = response.value.filter(f => f.childFolderCount > 0);
-    
-    const childFolderPromises = foldersWithChildren.map(async (folder) => {
-      try {
-        const childResponse = await callGraphAPI(
-          accessToken,
-          'GET',
-          `me/mailFolders/${folder.id}/childFolders`,
-          null,
-          { $select: selectFields }
-        );
-        
-        // Add parent folder info to each child
-        const childFolders = childResponse.value || [];
-        childFolders.forEach(child => {
-          child.parentFolder = folder.displayName;
-        });
-        
-        return childFolders;
-      } catch (error) {
-        console.error(`Error getting child folders for "${folder.displayName}": ${error.message}`);
-        return [];
-      }
-    });
-    
-    const childFolders = await Promise.all(childFolderPromises);
-    const allChildFolders = childFolders.flat();
-    
-    // Add top-level flag to parent folders
-    const topLevelFolders = response.value.map(folder => ({
-      ...folder,
-      isTopLevel: true
-    }));
-    
-    // Combine all folders
-    return [...topLevelFolders, ...allChildFolders];
-  } catch (error) {
-    console.error(`Error getting all folders: ${error.message}`);
-    throw error;
+    return makeErrorResponse(`Error listing folders: ${error.message}`);
   }
 }
 
@@ -163,9 +96,9 @@ function formatFolderList(folders, includeItemCounts) {
   const folderLines = sortedFolders.map(folder => {
     let folderInfo = folder.displayName;
     
-    // Add parent folder info if available
-    if (folder.parentFolder) {
-      folderInfo += ` (in ${folder.parentFolder})`;
+    // Show path for nested folders
+    if (folder.path && folder.path.includes('/')) {
+      folderInfo = folder.path;
     }
     
     // Add item counts if requested
@@ -207,14 +140,15 @@ function formatFolderHierarchy(folders, includeItemCounts) {
       children: []
     });
     
-    if (folder.isTopLevel) {
+    // Top-level folders have no '/' in their path
+    if (!folder.path || !folder.path.includes('/')) {
       rootFolders.push(folder.id);
     }
   });
   
   // Second pass: build hierarchy
   folders.forEach(folder => {
-    if (!folder.isTopLevel && folder.parentFolderId) {
+    if (folder.path && folder.path.includes('/') && folder.parentFolderId) {
       const parent = folderMap.get(folder.parentFolderId);
       if (parent) {
         parent.children.push(folder.id);
@@ -232,6 +166,11 @@ function formatFolderHierarchy(folders, includeItemCounts) {
     
     const indent = '  '.repeat(level);
     let line = `${indent}${folder.displayName}`;
+    
+    // Show usable path for nested folders
+    if (folder.path && folder.path.includes('/')) {
+      line += `  [path: ${folder.path}]`;
+    }
     
     // Add item counts if requested
     if (includeItemCounts) {

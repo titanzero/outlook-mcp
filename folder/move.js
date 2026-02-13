@@ -1,9 +1,10 @@
 /**
  * Move emails functionality
+ * Uses the Microsoft Graph JS SDK.
  */
-const { callGraphAPI } = require('../utils/graph-api');
-const { ensureAuthenticated } = require('../auth');
-const { getFolderIdByName } = require('../email/folder-utils');
+const { getGraphClient } = require('../utils/graph-client');
+const { getFolderIdByName, invalidateFolderCache } = require('../email/folder-utils');
+const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
 
 /**
  * Move emails handler
@@ -16,83 +17,52 @@ async function handleMoveEmails(args) {
   const sourceFolder = args.sourceFolder || '';
   
   if (!emailIds) {
-    return {
-      content: [{ 
-        type: "text", 
-        text: "Email IDs are required. Please provide a comma-separated list of email IDs to move."
-      }]
-    };
+    return makeErrorResponse('Email IDs are required. Please provide a comma-separated list of email IDs to move.');
   }
   
   if (!targetFolder) {
-    return {
-      content: [{ 
-        type: "text", 
-        text: "Target folder name is required."
-      }]
-    };
+    return makeErrorResponse('Target folder name is required.');
   }
   
   try {
-    // Get access token
-    const accessToken = await ensureAuthenticated();
+    const client = await getGraphClient();
     
     // Parse email IDs
     const ids = emailIds.split(',').map(id => id.trim()).filter(id => id);
     
     if (ids.length === 0) {
-      return {
-        content: [{ 
-          type: "text", 
-          text: "No valid email IDs provided."
-        }]
-      };
+      return makeErrorResponse('No valid email IDs provided.');
     }
     
     // Move emails
-    const result = await moveEmailsToFolder(accessToken, ids, targetFolder, sourceFolder);
+    const result = await moveEmailsToFolder(client, ids, targetFolder, sourceFolder);
     
-    return {
-      content: [{ 
-        type: "text", 
-        text: result.message
-      }]
-    };
+    return makeResponse(result.message);
   } catch (error) {
-    if (error.message === 'Authentication required') {
-      return {
-        content: [{ 
-          type: "text", 
-          text: "Authentication required. Please use the 'authenticate' tool first."
-        }]
-      };
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
     }
     
-    return {
-      content: [{ 
-        type: "text", 
-        text: `Error moving emails: ${error.message}`
-      }]
-    };
+    return makeErrorResponse(`Error moving emails: ${error.message}`);
   }
 }
 
 /**
  * Move emails to a folder
- * @param {string} accessToken - Access token
+ * @param {object} client - Microsoft Graph SDK client
  * @param {Array<string>} emailIds - Array of email IDs to move
  * @param {string} targetFolderName - Name of the target folder
  * @param {string} sourceFolderName - Name of the source folder (optional)
  * @returns {Promise<object>} - Result object with status and message
  */
-async function moveEmailsToFolder(accessToken, emailIds, targetFolderName, sourceFolderName) {
+async function moveEmailsToFolder(client, emailIds, targetFolderName, sourceFolderName) {
   try {
     // Get the target folder ID
-    const targetFolderId = await getFolderIdByName(accessToken, targetFolderName);
+    const targetFolderId = await getFolderIdByName(targetFolderName);
     if (!targetFolderId) {
       return {
         success: false,
-        message: `Target folder "${targetFolderName}" not found. Please specify a valid folder name.`
+        message: `Target folder "${targetFolderName}" not found. Use 'list-folders' to see available folders. For nested folders, use a path like 'ParentFolder/SubFolder'.`
       };
     }
     
@@ -106,14 +76,9 @@ async function moveEmailsToFolder(accessToken, emailIds, targetFolderName, sourc
     for (const emailId of emailIds) {
       try {
         // Move the email
-        await callGraphAPI(
-          accessToken,
-          'POST',
-          `me/messages/${emailId}/move`,
-          {
-            destinationId: targetFolderId
-          }
-        );
+        await client.api(`me/messages/${emailId}/move`).post({
+          destinationId: targetFolderId
+        });
         
         results.successful.push(emailId);
       } catch (error) {
@@ -149,6 +114,11 @@ async function moveEmailsToFolder(accessToken, emailIds, targetFolderName, sourc
       }
     }
     
+    // Invalidate folder cache – item counts have changed
+    if (results.successful.length > 0) {
+      invalidateFolderCache();
+    }
+
     return {
       success: results.successful.length > 0,
       message,

@@ -1,9 +1,10 @@
 /**
  * Create folder functionality
+ * Uses the Microsoft Graph JS SDK.
  */
-const { callGraphAPI } = require('../utils/graph-api');
-const { ensureAuthenticated } = require('../auth');
-const { getFolderIdByName } = require('../email/folder-utils');
+const { getGraphClient } = require('../utils/graph-client');
+const { getFolderIdByName, invalidateFolderCache } = require('../email/folder-utils');
+const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
 
 /**
  * Create folder handler
@@ -15,57 +16,36 @@ async function handleCreateFolder(args) {
   const parentFolder = args.parentFolder || '';
   
   if (!folderName) {
-    return {
-      content: [{ 
-        type: "text", 
-        text: "Folder name is required."
-      }]
-    };
+    return makeErrorResponse('Folder name is required.');
   }
   
   try {
-    // Get access token
-    const accessToken = await ensureAuthenticated();
+    const client = await getGraphClient();
     
     // Create folder with appropriate parent
-    const result = await createMailFolder(accessToken, folderName, parentFolder);
+    const result = await createMailFolder(client, folderName, parentFolder);
     
-    return {
-      content: [{ 
-        type: "text", 
-        text: result.message
-      }]
-    };
+    return makeResponse(result.message);
   } catch (error) {
-    if (error.message === 'Authentication required') {
-      return {
-        content: [{ 
-          type: "text", 
-          text: "Authentication required. Please use the 'authenticate' tool first."
-        }]
-      };
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
     }
     
-    return {
-      content: [{ 
-        type: "text", 
-        text: `Error creating folder: ${error.message}`
-      }]
-    };
+    return makeErrorResponse(`Error creating folder: ${error.message}`);
   }
 }
 
 /**
  * Create a new mail folder
- * @param {string} accessToken - Access token
+ * @param {object} client - Microsoft Graph SDK client
  * @param {string} folderName - Name of the folder to create
  * @param {string} parentFolderName - Name of the parent folder (optional)
  * @returns {Promise<object>} - Result object with status and message
  */
-async function createMailFolder(accessToken, folderName, parentFolderName) {
+async function createMailFolder(client, folderName, parentFolderName) {
   try {
     // Check if a folder with this name already exists
-    const existingFolder = await getFolderIdByName(accessToken, folderName);
+    const existingFolder = await getFolderIdByName(folderName);
     if (existingFolder) {
       return {
         success: false,
@@ -76,11 +56,11 @@ async function createMailFolder(accessToken, folderName, parentFolderName) {
     // If parent folder specified, find its ID
     let endpoint = 'me/mailFolders';
     if (parentFolderName) {
-      const parentId = await getFolderIdByName(accessToken, parentFolderName);
+      const parentId = await getFolderIdByName(parentFolderName);
       if (!parentId) {
         return {
           success: false,
-          message: `Parent folder "${parentFolderName}" not found. Please specify a valid parent folder or leave it blank to create at the root level.`
+          message: `Parent folder "${parentFolderName}" not found. Use 'list-folders' to see available folders. For nested parents, use a path like 'ParentFolder/SubFolder'.`
         };
       }
       
@@ -92,13 +72,11 @@ async function createMailFolder(accessToken, folderName, parentFolderName) {
       displayName: folderName
     };
     
-    const response = await callGraphAPI(
-      accessToken,
-      'POST',
-      endpoint,
-      folderData
-    );
-    
+    const response = await client.api(endpoint).post(folderData);
+
+    // Bust the folder cache so subsequent look-ups see the new folder
+    invalidateFolderCache();
+
     if (response && response.id) {
       const locationInfo = parentFolderName 
         ? `inside "${parentFolderName}"` 
