@@ -1,4 +1,4 @@
-const config = require('./config');
+const config = require('../config');
 const path = require('path');
 
 console.log('SERVER_NAME:', config.SERVER_NAME);

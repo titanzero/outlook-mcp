@@ -10,7 +10,7 @@ console.error('==== END DEBUG INFO ====');
 
 // Load the real application
 try {
-  require('./index');
+  require('../index');
 } catch (error) {
   console.error('ERROR LOADING INDEX.JS:', error);
 } 
