@@ -21,7 +21,7 @@ const emailTools = [
         },
         count: {
           type: "number",
-          description: "Number of emails to retrieve (default: 10, max: 50)"
+          description: "Number of emails to retrieve (default: 10, max: 500). Pagination is handled automatically."
         }
       },
       required: []
@@ -64,7 +64,7 @@ const emailTools = [
         },
         count: {
           type: "number",
-          description: "Number of results to return (default: 10, max: 50)"
+          description: "Number of results to return (default: 10, max: 500). Pagination is handled automatically."
         }
       },
       required: []
@@ -73,13 +73,17 @@ const emailTools = [
   },
   {
     name: "read-email",
-    description: "Reads the content of a specific email",
+    description: "Reads the content of a specific email. Returns a short preview (255 chars) by default. Set fullBody=true to fetch the complete email body.",
     inputSchema: {
       type: "object",
       properties: {
         id: {
           type: "string",
           description: "ID of the email to read"
+        },
+        fullBody: {
+          type: "boolean",
+          description: "If true, fetches the complete email body instead of the 255-char preview. Use for emails where the preview is insufficient (default: false)."
         }
       },
       required: ["id"]

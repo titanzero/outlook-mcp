@@ -1,9 +1,9 @@
 /**
  * Send email functionality
+ * Uses the Microsoft Graph JS SDK.
  */
-const config = require('../config');
-const { callGraphAPI } = require('../utils/graph-api');
-const { ensureAuthenticated } = require('../auth');
+const { getGraphClient } = require('../utils/graph-client');
+const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
 
 /**
  * Send email handler
@@ -15,36 +15,18 @@ async function handleSendEmail(args) {
   
   // Validate required parameters
   if (!to) {
-    return {
-      content: [{ 
-        type: "text", 
-        text: "Recipient (to) is required."
-      }]
-    };
+    return makeErrorResponse('Recipient (to) is required.');
   }
   
   if (!subject) {
-    return {
-      content: [{ 
-        type: "text", 
-        text: "Subject is required."
-      }]
-    };
+    return makeErrorResponse('Subject is required.');
   }
   
   if (!body) {
-    return {
-      content: [{ 
-        type: "text", 
-        text: "Body content is required."
-      }]
-    };
+    return makeErrorResponse('Body content is required.');
   }
   
   try {
-    // Get access token
-    const accessToken = await ensureAuthenticated();
-    
     // Format recipients
     const toRecipients = to.split(',').map(email => {
       email = email.trim();
@@ -90,30 +72,18 @@ async function handleSendEmail(args) {
     };
     
     // Make API call to send email
-    await callGraphAPI(accessToken, 'POST', 'me/sendMail', emailObject);
+    const client = await getGraphClient();
+    await client.api('me/sendMail').post(emailObject);
     
-    return {
-      content: [{ 
-        type: "text", 
-        text: `Email sent successfully!\n\nSubject: ${subject}\nRecipients: ${toRecipients.length}${ccRecipients.length > 0 ? ` + ${ccRecipients.length} CC` : ''}${bccRecipients.length > 0 ? ` + ${bccRecipients.length} BCC` : ''}\nMessage Length: ${body.length} characters`
-      }]
-    };
+    return makeResponse(
+      `Email sent successfully!\n\nSubject: ${subject}\nRecipients: ${toRecipients.length}${ccRecipients.length > 0 ? ` + ${ccRecipients.length} CC` : ''}${bccRecipients.length > 0 ? ` + ${bccRecipients.length} BCC` : ''}\nMessage Length: ${body.length} characters`
+    );
   } catch (error) {
-    if (error.message === 'Authentication required') {
-      return {
-        content: [{ 
-          type: "text", 
-          text: "Authentication required. Please use the 'authenticate' tool first."
-        }]
-      };
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
     }
     
-    return {
-      content: [{ 
-        type: "text", 
-        text: `Error sending email: ${error.message}`
-      }]
-    };
+    return makeErrorResponse(`Error sending email: ${error.message}`);
   }
 }
 

@@ -1,10 +1,12 @@
 /**
  * Improved search emails functionality
+ * Uses the Microsoft Graph JS SDK.
  */
 const config = require('../config');
-const { callGraphAPI, callGraphAPIPaginated } = require('../utils/graph-api');
-const { ensureAuthenticated } = require('../auth');
+const { getGraphClient, graphGetPaginated } = require('../utils/graph-client');
 const { resolveFolderPath } = require('./folder-utils');
+const { formatResponse } = require('../utils/response-formatter');
+const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
 
 /**
  * Search emails handler
@@ -13,7 +15,7 @@ const { resolveFolderPath } = require('./folder-utils');
  */
 async function handleSearchEmails(args) {
   const folder = args.folder || null;
-  const requestedCount = args.count || 10;
+  const requestedCount = Math.min(args.count || 10, config.MAX_RESULT_COUNT);
   const query = args.query || '';
   const from = args.from || '';
   const to = args.to || '';
@@ -22,20 +24,19 @@ async function handleSearchEmails(args) {
   const unreadOnly = args.unreadOnly;
 
   try {
-    // Get access token
-    const accessToken = await ensureAuthenticated();
+    const client = await getGraphClient();
 
     // If no folder specified, search across all folders (me/messages)
     // This includes inbox, archive, sent items, etc.
     const endpoint = folder
-      ? await resolveFolderPath(accessToken, folder)
+      ? await resolveFolderPath(folder)
       : 'me/messages';
     console.error(`Using endpoint: ${endpoint} for folder: ${folder || 'all'}`);
     
     // Execute progressive search with pagination
     const response = await progressiveSearch(
+      client,
       endpoint, 
-      accessToken, 
       { query, from, to, subject },
       { hasAttachments, unreadOnly },
       requestedCount
@@ -43,36 +44,24 @@ async function handleSearchEmails(args) {
     
     return formatSearchResults(response);
   } catch (error) {
-    // Handle authentication errors
-    if (error.message === 'Authentication required') {
-      return {
-        content: [{ 
-          type: "text", 
-          text: "Authentication required. Please use the 'authenticate' tool first."
-        }]
-      };
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
     }
     
-    // General error response
-    return {
-      content: [{ 
-        type: "text", 
-        text: `Error searching emails: ${error.message}`
-      }]
-    };
+    return makeErrorResponse(`Error searching emails: ${error.message}`);
   }
 }
 
 /**
  * Execute a search with progressively simpler fallback strategies
+ * @param {object} client - Microsoft Graph SDK client
  * @param {string} endpoint - API endpoint
- * @param {string} accessToken - Access token
  * @param {object} searchTerms - Search terms (query, from, to, subject)
  * @param {object} filterTerms - Filter terms (hasAttachments, unreadOnly)
  * @param {number} maxCount - Maximum number of results to retrieve
  * @returns {Promise<object>} - Search results
  */
-async function progressiveSearch(endpoint, accessToken, searchTerms, filterTerms, maxCount) {
+async function progressiveSearch(client, endpoint, searchTerms, filterTerms, maxCount) {
   const hasSearchTerms = searchTerms.query || searchTerms.from || searchTerms.to || searchTerms.subject;
   const hasBooleanFilters = filterTerms.hasAttachments === true || filterTerms.unreadOnly === true;
 
@@ -80,11 +69,11 @@ async function progressiveSearch(endpoint, accessToken, searchTerms, filterTerms
   if (!hasSearchTerms && !hasBooleanFilters) {
     console.error("No search criteria provided, returning recent emails");
     const basicParams = {
-      $top: Math.min(50, maxCount),
+      $top: Math.min(config.DEFAULT_PAGE_SIZE, maxCount),
       $select: config.EMAIL_SELECT_FIELDS,
       $orderby: 'receivedDateTime desc'
     };
-    const response = await callGraphAPIPaginated(accessToken, 'GET', endpoint, basicParams, maxCount);
+    const response = await graphGetPaginated(client, endpoint, basicParams, maxCount);
     response._searchInfo = { strategy: 'recent-emails', reason: 'no-criteria' };
     return response;
   }
@@ -93,10 +82,10 @@ async function progressiveSearch(endpoint, accessToken, searchTerms, filterTerms
   // NOTE: $search and $orderby cannot be used together on the messages endpoint
   if (hasSearchTerms) {
     try {
-      const params = buildSearchParams(searchTerms, filterTerms, Math.min(50, maxCount));
+      const params = buildSearchParams(searchTerms, filterTerms, Math.min(config.DEFAULT_PAGE_SIZE, maxCount));
       console.error("Attempting combined search with params:", JSON.stringify(params));
 
-      const response = await callGraphAPIPaginated(accessToken, 'GET', endpoint, params, maxCount);
+      const response = await graphGetPaginated(client, endpoint, params, maxCount);
       console.error(`Combined search returned ${response.value?.length || 0} results`);
       response._searchInfo = { strategy: 'combined-search' };
       return response;
@@ -111,7 +100,7 @@ async function progressiveSearch(endpoint, accessToken, searchTerms, filterTerms
         try {
           console.error(`Attempting search with only ${term}: "${searchTerms[term]}"`);
           const simplifiedParams = {
-            $top: Math.min(50, maxCount),
+            $top: Math.min(config.DEFAULT_PAGE_SIZE, maxCount),
             $select: config.EMAIL_SELECT_FIELDS
             // No $orderby — incompatible with $search
           };
@@ -125,7 +114,7 @@ async function progressiveSearch(endpoint, accessToken, searchTerms, filterTerms
 
           addBooleanFilters(simplifiedParams, filterTerms);
 
-          const response = await callGraphAPIPaginated(accessToken, 'GET', endpoint, simplifiedParams, maxCount);
+          const response = await graphGetPaginated(client, endpoint, simplifiedParams, maxCount);
           console.error(`Search with ${term} returned ${response.value?.length || 0} results`);
           response._searchInfo = { strategy: `single-term-${term}` };
           return response;
@@ -141,13 +130,13 @@ async function progressiveSearch(endpoint, accessToken, searchTerms, filterTerms
     try {
       console.error("Attempting search with only boolean filters");
       const filterOnlyParams = {
-        $top: Math.min(50, maxCount),
+        $top: Math.min(config.DEFAULT_PAGE_SIZE, maxCount),
         $select: config.EMAIL_SELECT_FIELDS,
         $orderby: 'receivedDateTime desc'
       };
       addBooleanFilters(filterOnlyParams, filterTerms);
 
-      const response = await callGraphAPIPaginated(accessToken, 'GET', endpoint, filterOnlyParams, maxCount);
+      const response = await graphGetPaginated(client, endpoint, filterOnlyParams, maxCount);
       console.error(`Boolean filter search returned ${response.value?.length || 0} results`);
       response._searchInfo = { strategy: 'boolean-filters-only' };
       return response;
@@ -159,11 +148,11 @@ async function progressiveSearch(endpoint, accessToken, searchTerms, filterTerms
   // 4. All strategies threw errors — fall back to recent emails
   console.error("All search strategies failed with errors, falling back to recent emails");
   const basicParams = {
-    $top: Math.min(50, maxCount),
+    $top: Math.min(config.DEFAULT_PAGE_SIZE, maxCount),
     $select: config.EMAIL_SELECT_FIELDS,
     $orderby: 'receivedDateTime desc'
   };
-  const response = await callGraphAPIPaginated(accessToken, 'GET', endpoint, basicParams, maxCount);
+  const response = await graphGetPaginated(client, endpoint, basicParams, maxCount);
   response._searchInfo = { strategy: 'recent-emails', reason: 'all-strategies-errored' };
   return response;
 }
@@ -246,35 +235,43 @@ function addBooleanFilters(params, filterTerms) {
  */
 function formatSearchResults(response) {
   if (!response.value || response.value.length === 0) {
-    return {
-      content: [{ 
-        type: "text", 
-        text: `No emails found matching your search criteria.`
-      }]
-    };
+    return makeResponse('No emails found matching your search criteria.');
   }
-  
-  // Format results
+
+  // Build structured rows for TOON
+  const rows = response.value.map((email, index) => {
+    const sender = email.from?.emailAddress || { name: 'Unknown', address: 'unknown' };
+    return {
+      n: index + 1,
+      unread: !email.isRead,
+      date: email.receivedDateTime,
+      from: sender.name,
+      email: sender.address,
+      subject: email.subject,
+      id: email.id,
+    };
+  });
+
+  // Build plain-text fallback
   const emailList = response.value.map((email, index) => {
     const sender = email.from?.emailAddress || { name: 'Unknown', address: 'unknown' };
     const date = new Date(email.receivedDateTime).toLocaleString();
     const readStatus = email.isRead ? '' : '[UNREAD] ';
-    
     return `${index + 1}. ${readStatus}${date} - From: ${sender.name} (${sender.address})\nSubject: ${email.subject}\nID: ${email.id}\n`;
   }).join("\n");
-  
+
   // Add search strategy info if available
   let additionalInfo = '';
   if (response._searchInfo) {
     additionalInfo = `\n(Search used ${response._searchInfo.strategy} strategy)`;
   }
-  
-  return {
-    content: [{ 
-      type: "text", 
-      text: `Found ${response.value.length} emails matching your search criteria:${additionalInfo}\n\n${emailList}`
-    }]
-  };
+
+  const text = formatResponse(
+    { results: rows },
+    `Found ${response.value.length} emails matching your search criteria:${additionalInfo}\n\n${emailList}`
+  );
+
+  return makeResponse(text);
 }
 
 module.exports = handleSearchEmails;
