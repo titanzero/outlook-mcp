@@ -18,7 +18,6 @@ const { rulesTools } = require('./rules');
 
 // Log startup information
 console.error(`STARTING ${config.SERVER_NAME.toUpperCase()} MCP SERVER`);
-console.error(`Test mode is ${config.USE_TEST_MODE ? 'enabled' : 'disabled'}`);
 
 // Combine all tools
 const TOOLS = [
@@ -60,7 +59,8 @@ server.fallbackRequestHandler = async (request) => {
             return acc;
           }, {})
         },
-        serverInfo: { name: config.SERVER_NAME, version: config.SERVER_VERSION }
+        serverInfo: { name: config.SERVER_NAME, version: config.SERVER_VERSION },
+        instructions: "Outlook data in tool responses is provided in TOON (Token-Oriented Object Notation) format, a compact encoding optimized for LLM token efficiency. Parse TOON responses as structured data. When sending data back (e.g. creating emails or events), use standard JSON arguments as defined in each tool's input schema."
       };
     }
     
