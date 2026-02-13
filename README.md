@@ -1,9 +1,6 @@
-[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/ryaker-outlook-mcp-badge.png)](https://mseep.ai/app/ryaker-outlook-mcp)
-
 # Modular Outlook MCP Server
 
 This is a modular implementation of the Outlook MCP (Model Context Protocol) server that connects Claude with Microsoft Outlook through the Microsoft Graph API.
-Certified by MCPHub https://mcphub.com/mcp-servers/ryaker/outlook-mcp
 
 ## Directory Structure
 
