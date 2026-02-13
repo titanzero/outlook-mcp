@@ -1,8 +1,33 @@
 /**
  * List rules functionality
+ * Uses the Microsoft Graph JS SDK.
  */
-const { callGraphAPI } = require('../utils/graph-api');
-const { ensureAuthenticated } = require('../auth');
+const { getGraphClient } = require('../utils/graph-client');
+const { formatResponse } = require('../utils/response-formatter');
+const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
+
+/**
+ * Build structured rows for TOON encoding.
+ * @param {Array} rules - Raw Graph API rule objects
+ * @param {boolean} includeDetails - Whether to include conditions/actions
+ * @returns {Array<object>}
+ */
+function buildRuleRows(rules, includeDetails) {
+  const sorted = [...rules].sort((a, b) => (a.sequence || 9999) - (b.sequence || 9999));
+  return sorted.map((rule, index) => {
+    const row = {
+      n: index + 1,
+      name: rule.displayName,
+      enabled: rule.isEnabled,
+      sequence: rule.sequence || null,
+    };
+    if (includeDetails) {
+      row.conditions = formatRuleConditions(rule) || '';
+      row.actions = formatRuleActions(rule) || '';
+    }
+    return row;
+  });
+}
 
 /**
  * List rules handler
@@ -13,55 +38,41 @@ async function handleListRules(args) {
   const includeDetails = args.includeDetails === true;
   
   try {
-    // Get access token
-    const accessToken = await ensureAuthenticated();
+    const client = await getGraphClient();
     
     // Get all inbox rules
-    const rules = await getInboxRules(accessToken);
-    
-    // Format the rules based on detail level
-    const formattedRules = formatRulesList(rules, includeDetails);
-    
-    return {
-      content: [{ 
-        type: "text", 
-        text: formattedRules
-      }]
-    };
+    const rules = await getInboxRules(client);
+
+    if (!rules || rules.length === 0) {
+      return makeResponse('No inbox rules found.');
+    }
+
+    const formattedRules = formatRulesList(rules, includeDetails) || 'No inbox rules found.';
+    const text = formatResponse(
+      { rules: buildRuleRows(rules, includeDetails) },
+      String(formattedRules)
+    );
+    return makeResponse(text);
   } catch (error) {
-    if (error.message === 'Authentication required') {
-      return {
-        content: [{ 
-          type: "text", 
-          text: "Authentication required. Please use the 'authenticate' tool first."
-        }]
-      };
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
     }
     
-    return {
-      content: [{ 
-        type: "text", 
-        text: `Error listing rules: ${error.message}`
-      }]
-    };
+    return makeErrorResponse(`Error listing rules: ${error.message}`);
   }
 }
 
 /**
  * Get all inbox rules
- * @param {string} accessToken - Access token
+ * Uses direct GET; messageRules typically return in one page.
+ * @param {object} client - Microsoft Graph SDK client
  * @returns {Promise<Array>} - Array of rule objects
  */
-async function getInboxRules(accessToken) {
+async function getInboxRules(client) {
   try {
-    const response = await callGraphAPI(
-      accessToken,
-      'GET',
-      'me/mailFolders/inbox/messageRules',
-      null
-    );
-    
-    return response.value || [];
+    const response = await client.api('me/mailFolders/inbox/messageRules').get();
+    const value = response && response.value;
+    return Array.isArray(value) ? value : [];
   } catch (error) {
     console.error(`Error getting inbox rules: ${error.message}`);
     throw error;

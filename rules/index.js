@@ -1,11 +1,12 @@
 /**
  * Email rules management module for Outlook MCP server
+ * Uses the Microsoft Graph JS SDK.
  */
-const handleListRules = require('./list');
+const { handleListRules, getInboxRules } = require('./list');
 const handleCreateRule = require('./create');
-
-// Import getInboxRules for the edit sequence tool
-const { getInboxRules } = require('./list');
+const { getGraphClient } = require('../utils/graph-client');
+const config = require('../config');
+const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
 
 /**
  * Edit rule sequence handler
@@ -16,73 +17,36 @@ async function handleEditRuleSequence(args) {
   const { ruleName, sequence } = args;
   
   if (!ruleName) {
-    return {
-      content: [{ 
-        type: "text", 
-        text: "Rule name is required. Please specify the exact name of an existing rule."
-      }]
-    };
+    return makeErrorResponse('Rule name is required. Please specify the exact name of an existing rule.');
   }
   
   if (!sequence || isNaN(sequence) || sequence < 1) {
-    return {
-      content: [{ 
-        type: "text", 
-        text: "A positive sequence number is required. Lower numbers run first (higher priority)."
-      }]
-    };
+    return makeErrorResponse('A positive sequence number is required. Lower numbers run first (higher priority).');
   }
   
   try {
-    // Get access token
-    const accessToken = await ensureAuthenticated();
+    const client = await getGraphClient();
     
     // Get all rules
-    const rules = await getInboxRules(accessToken);
+    const rules = await getInboxRules(client);
     
     // Find the rule by name
     const rule = rules.find(r => r.displayName === ruleName);
     if (!rule) {
-      return {
-        content: [{ 
-          type: "text", 
-          text: `Rule with name "${ruleName}" not found.`
-        }]
-      };
+      return makeErrorResponse(`Rule with name "${ruleName}" not found.`);
     }
     
     // Update the rule sequence
-    const updateResult = await callGraphAPI(
-      accessToken,
-      'PATCH',
-      `me/mailFolders/inbox/messageRules/${rule.id}`,
-      {
-        sequence: sequence
-      }
-    );
+    await client.api(`me/mailFolders/inbox/messageRules/${rule.id}`)
+      .patch({ sequence: sequence });
     
-    return {
-      content: [{ 
-        type: "text", 
-        text: `Successfully updated the sequence of rule "${ruleName}" to ${sequence}.`
-      }]
-    };
+    return makeResponse(`Successfully updated the sequence of rule "${ruleName}" to ${sequence}.`);
   } catch (error) {
-    if (error.message === 'Authentication required') {
-      return {
-        content: [{ 
-          type: "text", 
-          text: "Authentication required. Please use the 'authenticate' tool first."
-        }]
-      };
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
     }
     
-    return {
-      content: [{ 
-        type: "text", 
-        text: `Error updating rule sequence: ${error.message}`
-      }]
-    };
+    return makeErrorResponse(`Error updating rule sequence: ${error.message}`);
   }
 }
 
@@ -139,7 +103,7 @@ const rulesTools = [
         },
         sequence: {
           type: "number",
-          description: "Order in which the rule is executed (lower numbers run first, default: 100)"
+          description: `Order in which the rule is executed (lower numbers run first, default: ${config.DEFAULT_RULE_SEQUENCE})`
         }
       },
       required: ["name"]

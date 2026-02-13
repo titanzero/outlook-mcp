@@ -1,10 +1,12 @@
 /**
  * Create rule functionality
+ * Uses the Microsoft Graph JS SDK.
  */
-const { callGraphAPI } = require('../utils/graph-api');
-const { ensureAuthenticated } = require('../auth');
+const config = require('../config');
+const { getGraphClient } = require('../utils/graph-client');
 const { getFolderIdByName } = require('../email/folder-utils');
 const { getInboxRules } = require('./list');
+const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
 
 /**
  * Create rule handler
@@ -25,21 +27,11 @@ async function handleCreateRule(args) {
   
   // Add validation for sequence parameter
   if (sequence !== undefined && (isNaN(sequence) || sequence < 1)) {
-    return {
-      content: [{ 
-        type: "text", 
-        text: "Sequence must be a positive number greater than zero."
-      }]
-    };
+    return makeErrorResponse('Sequence must be a positive number greater than zero.');
   }
   
   if (!name) {
-    return {
-      content: [{ 
-        type: "text", 
-        text: "Rule name is required."
-      }]
-    };
+    return makeErrorResponse('Rule name is required.');
   }
   
   // Validate that at least one condition or action is specified
@@ -47,29 +39,18 @@ async function handleCreateRule(args) {
   const hasAction = moveToFolder || markAsRead === true;
   
   if (!hasCondition) {
-    return {
-      content: [{ 
-        type: "text", 
-        text: "At least one condition is required. Specify fromAddresses, containsSubject, or hasAttachments."
-      }]
-    };
+    return makeErrorResponse('At least one condition is required. Specify fromAddresses, containsSubject, or hasAttachments.');
   }
   
   if (!hasAction) {
-    return {
-      content: [{ 
-        type: "text", 
-        text: "At least one action is required. Specify moveToFolder or markAsRead."
-      }]
-    };
+    return makeErrorResponse('At least one action is required. Specify moveToFolder or markAsRead.');
   }
   
   try {
-    // Get access token
-    const accessToken = await ensureAuthenticated();
+    const client = await getGraphClient();
     
     // Create rule
-    const result = await createInboxRule(accessToken, {
+    const result = await createInboxRule(client, {
       name,
       fromAddresses,
       containsSubject,
@@ -83,42 +64,27 @@ async function handleCreateRule(args) {
     let responseText = result.message;
     
     // Add a tip about sequence if it wasn't provided
-    if (!sequence && !result.error) {
+    if (sequence === undefined && !result.error) {
       responseText += "\n\nTip: You can specify a 'sequence' parameter when creating rules to control their execution order. Lower sequence numbers run first.";
     }
     
-    return {
-      content: [{ 
-        type: "text", 
-        text: responseText
-      }]
-    };
+    return makeResponse(responseText);
   } catch (error) {
-    if (error.message === 'Authentication required') {
-      return {
-        content: [{ 
-          type: "text", 
-          text: "Authentication required. Please use the 'authenticate' tool first."
-        }]
-      };
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
     }
     
-    return {
-      content: [{ 
-        type: "text", 
-        text: `Error creating rule: ${error.message}`
-      }]
-    };
+    return makeErrorResponse(`Error creating rule: ${error.message}`);
   }
 }
 
 /**
  * Create a new inbox rule
- * @param {string} accessToken - Access token
+ * @param {object} client - Microsoft Graph SDK client
  * @param {object} ruleOptions - Rule creation options
  * @returns {Promise<object>} - Result object with status and message
  */
-async function createInboxRule(accessToken, ruleOptions) {
+async function createInboxRule(client, ruleOptions) {
   try {
     const {
       name,
@@ -136,21 +102,21 @@ async function createInboxRule(accessToken, ruleOptions) {
     if (!ruleSequence) {
       try {
         // Default to 100 if we can't get existing rules
-        ruleSequence = 100;
+        ruleSequence = config.DEFAULT_RULE_SEQUENCE;
         
         // Get existing rules to find highest sequence
-        const existingRules = await getInboxRules(accessToken);
+        const existingRules = await getInboxRules(client);
         if (existingRules && existingRules.length > 0) {
           // Find the highest sequence
           const highestSequence = Math.max(...existingRules.map(r => r.sequence || 0));
           // Set new rule sequence to be higher
-          ruleSequence = Math.max(highestSequence + 1, 100);
+          ruleSequence = Math.max(highestSequence + 1, config.DEFAULT_RULE_SEQUENCE);
           console.error(`Auto-generated sequence: ${ruleSequence} (based on highest existing: ${highestSequence})`);
         }
       } catch (sequenceError) {
         console.error(`Error determining rule sequence: ${sequenceError.message}`);
         // Fall back to default value
-        ruleSequence = 100;
+        ruleSequence = config.DEFAULT_RULE_SEQUENCE;
       }
     }
     
@@ -197,7 +163,7 @@ async function createInboxRule(accessToken, ruleOptions) {
     if (moveToFolder) {
       // Get folder ID
       try {
-        const folderId = await getFolderIdByName(accessToken, moveToFolder);
+        const folderId = await getFolderIdByName(moveToFolder);
         if (!folderId) {
           return {
             success: false,
@@ -220,12 +186,7 @@ async function createInboxRule(accessToken, ruleOptions) {
     }
     
     // Create the rule
-    const response = await callGraphAPI(
-      accessToken,
-      'POST',
-      'me/mailFolders/inbox/messageRules',
-      rule
-    );
+    const response = await client.api('me/mailFolders/inbox/messageRules').post(rule);
     
     if (response && response.id) {
       return {
