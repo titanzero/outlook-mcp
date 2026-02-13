@@ -1,8 +1,9 @@
 /**
  * Delete event functionality
+ * Uses the Microsoft Graph JS SDK.
  */
-const { callGraphAPI } = require('../utils/graph-api');
-const { ensureAuthenticated } = require('../auth');
+const { getGraphClient } = require('../utils/graph-client');
+const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
 
 /**
  * Delete event handler
@@ -13,46 +14,22 @@ async function handleDeleteEvent(args) {
   const { eventId } = args;
 
   if (!eventId) {
-    return {
-      content: [{
-        type: "text",
-        text: "Event ID is required to delete an event."
-      }]
-    };
+    return makeErrorResponse('Event ID is required to delete an event.');
   }
 
   try {
-    // Get access token
-    const accessToken = await ensureAuthenticated();
-
-    // Build API endpoint
-    const endpoint = `me/events/${eventId}`;
+    const client = await getGraphClient();
 
     // Make API call
-    await callGraphAPI(accessToken, 'DELETE', endpoint);
+    await client.api(`me/events/${eventId}`).delete();
 
-    return {
-      content: [{
-        type: "text",
-        text: `Event with ID ${eventId} has been successfully deleted.`
-      }]
-    };
+    return makeResponse(`Event with ID ${eventId} has been successfully deleted.`);
   } catch (error) {
-    if (error.message === 'Authentication required') {
-      return {
-        content: [{
-          type: "text",
-          text: "Authentication required. Please use the 'authenticate' tool first."
-        }]
-      };
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
     }
 
-    return {
-      content: [{
-        type: "text",
-        text: `Error deleting event: ${error.message}`
-      }]
-    };
+    return makeErrorResponse(`Error deleting event: ${error.message}`);
   }
 }
 

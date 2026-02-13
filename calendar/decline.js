@@ -1,8 +1,9 @@
 /**
  * Decline event functionality
+ * Uses the Microsoft Graph JS SDK.
  */
-const { callGraphAPI } = require('../utils/graph-api');
-const { ensureAuthenticated } = require('../auth');
+const { getGraphClient } = require('../utils/graph-client');
+const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
 
 /**
  * Decline event handler
@@ -13,20 +14,11 @@ async function handleDeclineEvent(args) {
   const { eventId, comment } = args;
 
   if (!eventId) {
-    return {
-      content: [{
-        type: "text",
-        text: "Event ID is required to decline an event."
-      }]
-    };
+    return makeErrorResponse('Event ID is required to decline an event.');
   }
 
   try {
-    // Get access token
-    const accessToken = await ensureAuthenticated();
-
-    // Build API endpoint
-    const endpoint = `me/events/${eventId}/decline`;
+    const client = await getGraphClient();
 
     // Request body
     const body = {
@@ -34,30 +26,15 @@ async function handleDeclineEvent(args) {
     };
 
     // Make API call
-    await callGraphAPI(accessToken, 'POST', endpoint, body);
+    await client.api(`me/events/${eventId}/decline`).post(body);
 
-    return {
-      content: [{
-        type: "text",
-        text: `Event with ID ${eventId} has been successfully declined.`
-      }]
-    };
+    return makeResponse(`Event with ID ${eventId} has been successfully declined.`);
   } catch (error) {
-    if (error.message === 'Authentication required') {
-      return {
-        content: [{
-          type: "text",
-          text: "Authentication required. Please use the 'authenticate' tool first."
-        }]
-      };
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
     }
 
-    return {
-      content: [{
-        type: "text",
-        text: `Error declining event: ${error.message}`
-      }]
-    };
+    return makeErrorResponse(`Error declining event: ${error.message}`);
   }
 }
 

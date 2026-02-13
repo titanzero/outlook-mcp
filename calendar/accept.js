@@ -1,8 +1,9 @@
 /**
  * Accept event functionality
+ * Uses the Microsoft Graph JS SDK.
  */
-const { callGraphAPI } = require('../utils/graph-api');
-const { ensureAuthenticated } = require('../auth');
+const { getGraphClient } = require('../utils/graph-client');
+const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
 
 /**
  * Accept event handler
@@ -13,20 +14,11 @@ async function handleAcceptEvent(args) {
   const { eventId, comment } = args;
 
   if (!eventId) {
-    return {
-      content: [{
-        type: "text",
-        text: "Event ID is required to accept an event."
-      }]
-    };
+    return makeErrorResponse('Event ID is required to accept an event.');
   }
 
   try {
-    // Get access token
-    const accessToken = await ensureAuthenticated();
-
-    // Build API endpoint
-    const endpoint = `me/events/${eventId}/accept`;
+    const client = await getGraphClient();
 
     // Request body
     const body = {
@@ -34,30 +26,15 @@ async function handleAcceptEvent(args) {
     };
 
     // Make API call
-    await callGraphAPI(accessToken, 'POST', endpoint, body);
+    await client.api(`me/events/${eventId}/accept`).post(body);
 
-    return {
-      content: [{
-        type: "text",
-        text: `Event with ID ${eventId} has been successfully accepted.`
-      }]
-    };
+    return makeResponse(`Event with ID ${eventId} has been successfully accepted.`);
   } catch (error) {
-    if (error.message === 'Authentication required') {
-      return {
-        content: [{
-          type: "text",
-          text: "Authentication required. Please use the 'authenticate' tool first."
-        }]
-      };
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
     }
 
-    return {
-      content: [{
-        type: "text",
-        text: `Error accepting event: ${error.message}`
-      }]
-    };
+    return makeErrorResponse(`Error accepting event: ${error.message}`);
   }
 }
 

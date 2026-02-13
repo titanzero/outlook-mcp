@@ -1,9 +1,10 @@
 /**
  * Create event functionality
+ * Uses the Microsoft Graph JS SDK.
  */
-const { callGraphAPI } = require('../utils/graph-api');
-const { ensureAuthenticated } = require('../auth');
+const { getGraphClient } = require('../utils/graph-client');
 const { DEFAULT_TIMEZONE } = require('../config');
+const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
 
 /**
  * Create event handler
@@ -14,20 +15,11 @@ async function handleCreateEvent(args) {
   const { subject, start, end, attendees, body } = args;
 
   if (!subject || !start || !end) {
-    return {
-      content: [{
-        type: "text",
-        text: "Subject, start, and end times are required to create an event."
-      }]
-    };
+    return makeErrorResponse('Subject, start, and end times are required to create an event.');
   }
 
   try {
-    // Get access token
-    const accessToken = await ensureAuthenticated();
-
-    // Build API endpoint
-    const endpoint = `me/events`;
+    const client = await getGraphClient();
 
     // Request body
     const bodyContent = {
@@ -39,30 +31,15 @@ async function handleCreateEvent(args) {
     };
 
     // Make API call
-    const response = await callGraphAPI(accessToken, 'POST', endpoint, bodyContent);
+    await client.api('me/events').post(bodyContent);
 
-    return {
-      content: [{
-        type: "text",
-        text: `Event '${subject}' has been successfully created.`
-      }]
-    };
+    return makeResponse(`Event '${subject}' has been successfully created.`);
   } catch (error) {
-    if (error.message === 'Authentication required') {
-      return {
-        content: [{
-          type: "text",
-          text: "Authentication required. Please use the 'authenticate' tool first."
-        }]
-      };
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
     }
 
-    return {
-      content: [{
-        type: "text",
-        text: `Error creating event: ${error.message}`
-      }]
-    };
+    return makeErrorResponse(`Error creating event: ${error.message}`);
   }
 }
 
