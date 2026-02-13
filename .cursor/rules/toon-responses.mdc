@@ -1,0 +1,63 @@
+---
+description: TOON response formatting rules
+globs:
+  - "email/**/*.js"
+  - "calendar/**/*.js"
+  - "folder/**/*.js"
+  - "rules/**/*.js"
+  - "utils/response-formatter.js"
+alwaysApply: false
+---
+
+# TOON Response Formatting
+
+## Purpose
+TOON (Token-Oriented Object Notation) is the compact response mode controlled by `config.RESPONSE_FORMAT` / `OUTLOOK_RESPONSE_FORMAT`.
+
+## Handler Pattern
+Each data-returning handler should provide both a structured payload and a text fallback, then call `formatResponse()`:
+
+```js
+const { formatResponse } = require('../utils/response-formatter');
+const { makeResponse } = require('../utils/response-helpers');
+
+const structured = { emails: rows };
+const textFallback = `Found ${rows.length} emails:\n...`;
+
+const text = formatResponse(structured, textFallback);
+return makeResponse(text);
+```
+
+## Data Shape Guidance
+
+### Tabular (arrays of uniform objects)
+Use for list/search outputs where each row has the same shape:
+```js
+{ emails: [
+  { n: 1, unread: true, date: '...', from: '...', subject: '...', id: '...' },
+  { n: 2, unread: false, date: '...', from: '...', subject: '...', id: '...' },
+]}
+```
+TOON compresses this efficiently with a shared header.
+
+### Key-Value (single objects)
+Use for detail responses (read-email, single event):
+```js
+{ from: '...', to: '...', subject: '...', date: '...', body: '...' }
+```
+
+## TOON-Specific Rules
+1. Always provide both structured data and text fallback.
+2. Keep structured output flat when possible; avoid deep nesting.
+3. Keep ISO dates/times in structured data.
+4. Format dates for readability only in the text fallback.
+
+## Formatter API (`utils/response-formatter.js`)
+- `formatResponse(structuredData, textFallback)` — returns TOON or text based on config
+- `formatAsToon(data)` — always returns TOON string
+- `isToonEnabled()` — boolean check
+
+## Config and Tests
+- Default mode is `'toon'`.
+- Set `OUTLOOK_RESPONSE_FORMAT=text` to force plain text.
+- In tests, set `process.env.OUTLOOK_RESPONSE_FORMAT = 'text'` before module imports.

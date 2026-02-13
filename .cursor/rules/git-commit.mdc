@@ -1,0 +1,61 @@
+---
+description: Conventional Commits standard for git commit messages
+alwaysApply: true
+---
+
+# Git Commit Messages
+
+Follow the [Conventional Commits](https://www.conventionalcommits.org/) standard.
+
+## Format
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+- **type** (required): `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `style`, `perf`, `ci`, `build`
+- **scope** (optional): module affected — `auth`, `email`, `calendar`, `folder`, `rules`, `config`, `utils`
+- **description**: imperative mood, English, lowercase, no trailing period, max ~72 characters
+
+## Structural Elements
+
+- **fix**: patches a bug (correlates with PATCH in Semantic Versioning)
+- **feat**: introduces a new feature (correlates with MINOR in Semantic Versioning)
+- **BREAKING CHANGE**: a footer `BREAKING CHANGE:`, or a `!` after the type/scope, introduces a breaking API change (correlates with MAJOR in Semantic Versioning); can be part of any type
+- Other types (`build`, `chore`, `ci`, `docs`, `style`, `refactor`, `perf`, `test`) are allowed and have no implicit SemVer effect unless they include a BREAKING CHANGE
+- Footers other than `BREAKING CHANGE: <description>` may be provided and follow git trailer format
+
+## Specification Rules
+
+- Commits MUST be prefixed with a type, followed by OPTIONAL scope, OPTIONAL `!`, and REQUIRED terminal colon and space
+- `feat` MUST be used when a commit adds a new feature; `fix` MUST be used for bug fixes
+- A scope MAY be provided after the type, surrounded by parenthesis, e.g. `fix(parser):`
+- A description MUST immediately follow the colon and space — short summary of code changes
+- A longer body MAY follow the description, separated by one blank line; free-form, any number of paragraphs
+- One or more footers MAY be provided one blank line after the body; each footer uses a word token followed by `:<space>` or `<space>#` separator
+- Footer tokens MUST use `-` in place of whitespace (exception: `BREAKING CHANGE`)
+- Breaking changes MUST be indicated in the type/scope prefix (`!`) or as a `BREAKING CHANGE:` footer
+- Types are NOT case sensitive, except `BREAKING CHANGE` which MUST be uppercase
+- `BREAKING-CHANGE` is synonymous with `BREAKING CHANGE` when used as a footer token
+
+## Examples
+
+Good:
+
+- `feat(email): add full body support to read endpoint`
+- `fix(auth): align config scopes with auth server`
+- `refactor(utils): extract graph client into dedicated module`
+- `chore: remove deprecated test mode log`
+- `docs: add TOON instructions to initialize response`
+- `test(email): add list pagination edge-case tests`
+
+Bad:
+
+- `Fixed bug` — missing type/scope format, past tense
+- `feat(email): Add full body support.` — uppercase start, trailing period
+- `update stuff` — missing type, vague description
+- `feat(email)` — missing description

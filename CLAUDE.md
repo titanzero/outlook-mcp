@@ -1,78 +1,106 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Commands
 
-## Development Commands
+- `npm install` — **always run first**
+- `npm start` — start MCP server (stdio transport)
+- `npm run auth-server` — OAuth server on port 3333 (must be running before auth)
+- `npm run inspect` — MCP Inspector for interactive testing
+- `npm test` — Jest tests
+- `npm run debug` — debug: print env vars and start MCP server
+- `npm run find-folders` — find folder IDs via Graph API
+- `npm run move-github` — move GitHub emails to subfolder
+- `npm run create-rules` — create inbox rules for GitHub notifications
+- `npx kill-port 3333` — free port 3333 if occupied
 
-- `npm install` - **ALWAYS run first** to install dependencies 
-- `npm start` - Start the MCP server
-- `npm run auth-server` - Start the OAuth authentication server on port 3333 (**required for authentication**)
-- `npm run test-mode` - Start the server in test mode with mock data
-- `npm run inspect` - Use MCP Inspector to test the server interactively
-- `npm test` - Run Jest tests
-- `./test-modular-server.sh` - Test the server using MCP Inspector
-- `./test-direct.sh` - Direct testing script
-- `npx kill-port 3333` - Kill process using port 3333 if auth server won't start
+## Cursor Rules Map
 
-## Architecture Overview
+- `.cursor/rules/general.mdc` — always-apply core conventions (CommonJS, config centralization, baseline response/error/logging patterns)
+- `.cursor/rules/graph-api.mdc` — Graph SDK client usage, fluent API, pagination, and field selection rules
+- `.cursor/rules/toon-responses.mdc` — TOON data-shaping and formatter usage
+- `.cursor/rules/new-tool.mdc` — workflow and checklist for adding/registering new tools
+- `.cursor/rules/testing.mdc` — Jest conventions, mocks, and test structure
 
-This is a modular MCP (Model Context Protocol) server that provides Claude with access to Microsoft Outlook via the Microsoft Graph API. The architecture is organized into functional modules:
+## Project Structure
 
-### Core Structure
-- `index.js` - Main entry point that combines all module tools and handles MCP protocol
-- `config.js` - Centralized configuration including API endpoints, field selections, and authentication settings
-- `outlook-auth-server.js` - Standalone OAuth server for authentication flow
+```
+index.js              — MCP entry point; imports `authTools`, `calendarTools`, `emailTools`, `folderTools`, `rulesTools` and combines them into `TOOLS`
+config.js             — all constants: field selections, pagination, auth, timezone, response format
+outlook-auth-server.js — standalone Express OAuth server
 
-### Modules
-Each module exports tools and handlers:
-- `auth/` - OAuth 2.0 authentication with token management
-- `calendar/` - Calendar operations (list, create, accept, decline, delete events)
-- `email/` - Email management (list, search, read, send, mark as read)
-- `folder/` - Folder operations (list, create, move)
-- `rules/` - Email rules management
-- `utils/` - Shared utilities including Graph API client and OData helpers
+auth/
+  index.js            — exports `authTools`, `ensureAuthenticated`, `tokenManager`
+  tools.js            — auth tool definitions (`about`, `authenticate`, `check-auth-status`)
+  token-manager.js    — token load/save/refresh logic
+  oauth-server.js     — OAuth callback/exchange helpers
 
-### Key Components
-- **Token Management**: Tokens stored in `~/.outlook-mcp-tokens.json`
-- **Graph API Client**: `utils/graph-api.js` handles all Microsoft Graph API calls with proper OData encoding
-- **Test Mode**: Mock data responses when `USE_TEST_MODE=true`
-- **Modular Tools**: Each module exports tools array that gets combined in main server
+email/                — list, search, read, send, mark-as-read + folder-utils.js
+calendar/             — list, create, accept, decline, cancel, delete
+folder/               — list, create, move
+rules/                — list, create, edit-rule-sequence
 
-## Authentication Flow
+utils/
+  graph-client.js     — Graph SDK wrapper: `getGraphClient()`, `graphGetPaginated()`
+  response-formatter.js — TOON / plain-text toggle (reads `config.RESPONSE_FORMAT`)
+  response-helpers.js — `isAuthError()`, `makeErrorResponse()`, `makeResponse()`
 
-1. Azure app registration required with specific permissions (Mail.Read, Mail.Send, Calendars.ReadWrite, etc.)
-2. Start auth server: `npm run auth-server` 
-3. Use authenticate tool to get OAuth URL
-4. Complete browser authentication
-5. Tokens automatically stored and refreshed
+scripts/              — CLI & debug one-off scripts (not imported by app modules)
+  debug-env.js        — debug: print env vars and start MCP server
+  test-config.js      — debug: verify config and token path
+  find-folder-ids.js  — CLI: find folder IDs via Graph API
+  move-github-emails.js — CLI: move GitHub emails to subfolder
+  create-notifications-rule.js — CLI: create inbox rules for GitHub
+  backup-logs.sh      — shell: backup Claude Desktop logs
+  test-direct.sh      — shell: test server directly via nc
+  test-modular-server.sh — shell: test server via MCP Inspector
+```
 
-## Configuration Requirements
+## Key Patterns
 
-### Environment Variables
-- **For .env file**: Use `MS_CLIENT_ID` and `MS_CLIENT_SECRET`
-- **For Claude Desktop config**: Use `OUTLOOK_CLIENT_ID` and `OUTLOOK_CLIENT_SECRET`
-- **Important**: Always use the client secret VALUE from Azure, not the Secret ID
-- Copy `.env.example` to `.env` and populate with real Azure credentials
-- Default timezone is "Central European Standard Time"
-- Default page size is 25, max results 50
+- **CommonJS** (`require` / `module.exports`) — no ESM
+- **Module pattern**: each module `index.js` exports a `{module}Tools` array plus handlers
+- **Tool shape**: `{ name, description, inputSchema, handler }`
+- **Constants**: keep field selections, defaults, limits, and URLs centralized in `config.js`
+- **Logging**: use `console.error()` for diagnostics (stdout is reserved for MCP protocol traffic)
 
-### Common Setup Issues
-1. **Missing dependencies**: Always run `npm install` first
-2. **Wrong secret**: Use Azure secret VALUE, not ID (AADSTS7000215 error)
-3. **Auth server not running**: Start `npm run auth-server` before authenticating
-4. **Port conflicts**: Use `npx kill-port 3333` if port is in use
+## Graph and Response Flow
 
-## Test Mode
+- `getGraphClient()` authenticates internally via `ensureAuthenticated()`; handlers should not run a separate auth check.
+- Use `graphGetPaginated()` for list endpoints that may return `@odata.nextLink`.
+- Data handlers should build a structured payload plus text fallback, then call `formatResponse(structured, textFallback)`.
+- Return `makeResponse(text)` for success; in `catch`, use `isAuthError(error)` and `makeErrorResponse(...)`.
 
-Set `USE_TEST_MODE=true` to use mock data instead of real API calls. Mock responses are defined in `utils/mock-data.js`.
+## Config Values (config.js)
 
-## OData Query Handling
+| Constant | Value |
+|---|---|
+| `DEFAULT_PAGE_SIZE` | 50 |
+| `MAX_RESULT_COUNT` | 1000 |
+| `DEFAULT_TIMEZONE` | "Central European Standard Time" |
+| `RESPONSE_FORMAT` | `process.env.OUTLOOK_RESPONSE_FORMAT \|\| 'toon'` |
+| `EMAIL_SELECT_FIELDS` | `id,subject,from,receivedDateTime,isRead` |
+| `EMAIL_DETAIL_FIELDS` | bodyPreview-based (no full body) |
+| `EMAIL_FULL_BODY_FIELDS` | includes `body` field (used when `fullBody=true`) |
 
-The Graph API client properly handles OData filters with URI encoding. Filters are processed separately from other query parameters to ensure correct escaping of special characters.
+## Environment Variables
 
-## Error Handling
+- `.env` file: `OUTLOOK_CLIENT_ID`, `OUTLOOK_CLIENT_SECRET`
+- Claude Desktop config: `OUTLOOK_CLIENT_ID`, `OUTLOOK_CLIENT_SECRET` (used by MCP server)
+- `OUTLOOK_RESPONSE_FORMAT` — `'toon'` (default) or `'text'`
+- **Important**: use Azure secret **VALUE**, not the Secret ID
+- Token storage: `~/.outlook-mcp-tokens.json` (via `config.getTokenStorePath()`)
 
-- Authentication failures return "UNAUTHORIZED" error
-- Graph API errors include status codes and response details
-- Token expiration triggers re-authentication flow
-- Empty API responses are handled gracefully (returns '{}' if empty)
+## Auth Flow
+
+1. Register Azure app with permissions: Mail.Read, Mail.ReadWrite, Mail.Send, Calendars.Read, Calendars.ReadWrite, etc.
+2. `npm run auth-server` → opens port 3333
+3. Use `authenticate` tool → returns OAuth URL
+4. Complete browser login → tokens saved to `~/.outlook-mcp-tokens.json`
+5. Tokens auto-refresh via `ensureAuthenticated()`
+
+## Testing
+
+- Framework: Jest
+- Tests in `test/` mirroring source structure (`test/email/list.test.js`)
+- Mock `utils/graph-client` and module dependencies with `jest.mock()`
+- Set `process.env.OUTLOOK_RESPONSE_FORMAT = 'text'` at top of test files to get plain-text output for assertions

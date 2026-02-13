@@ -8,32 +8,51 @@ Certified by MCPHub https://mcphub.com/mcp-servers/ryaker/outlook-mcp
 ## Directory Structure
 
 ```
-/modular/
+/
 ├── index.js                 # Main entry point
 ├── config.js                # Configuration settings
+├── outlook-auth-server.js   # Standalone OAuth server
 ├── auth/                    # Authentication modules
 │   ├── index.js             # Authentication exports
-│   ├── token-manager.js     # Token storage and refresh
+│   ├── token-manager.js     # Unified token storage and refresh
+│   ├── oauth-server.js      # OAuth route handlers
 │   └── tools.js             # Auth-related tools
 ├── calendar/                # Calendar functionality
 │   ├── index.js             # Calendar exports
 │   ├── list.js              # List events
 │   ├── create.js            # Create event
 │   ├── delete.js            # Delete event
-│   ├── cancel.js            # Cancel
+│   ├── cancel.js            # Cancel event
 │   ├── accept.js            # Accept event
-│   ├── tentative.js         # Tentatively accept event
-│   ├── decline.js           # Decline event
+│   └── decline.js           # Decline event
 ├── email/                   # Email functionality
 │   ├── index.js             # Email exports
 │   ├── list.js              # List emails
 │   ├── search.js            # Search emails
 │   ├── read.js              # Read email
-│   └── send.js              # Send email
-└── utils/                   # Utility functions
-    ├── graph-api.js         # Microsoft Graph API helper
-    ├── odata-helpers.js     # OData query building
-    └── mock-data.js         # Test mode data
+│   ├── send.js              # Send email
+│   ├── mark-as-read.js      # Mark email as read
+│   └── folder-utils.js      # Folder resolution utilities
+├── folder/                  # Folder functionality
+│   ├── index.js             # Folder exports
+│   ├── list.js              # List folders
+│   ├── create.js            # Create folder
+│   └── move.js              # Move emails
+├── rules/                   # Email rules
+│   ├── index.js             # Rules exports
+│   ├── list.js              # List rules
+│   └── create.js            # Create rule
+├── utils/                   # Utility functions
+│   └── graph-client.js      # Microsoft Graph SDK client wrapper
+└── scripts/                 # CLI & debug one-off scripts
+    ├── debug-env.js         # Debug: print env and start MCP server
+    ├── test-config.js       # Debug: verify config and token path
+    ├── find-folder-ids.js   # CLI: find folder IDs via Graph API
+    ├── move-github-emails.js # CLI: move GitHub emails to subfolder
+    ├── create-notifications-rule.js # CLI: create inbox rules for GitHub
+    ├── backup-logs.sh       # Shell: backup Claude Desktop logs
+    ├── test-direct.sh       # Shell: test server directly
+    └── test-modular-server.sh # Shell: test server via MCP Inspector
 ```
 
 ## Features
@@ -43,7 +62,7 @@ Certified by MCPHub https://mcphub.com/mcp-servers/ryaker/outlook-mcp
 - **Calendar Management**: List, create, accept, decline, and delete calendar events
 - **Modular Structure**: Clean separation of concerns for better maintainability
 - **OData Filter Handling**: Proper escaping and formatting of OData queries
-- **Test Mode**: Simulated responses for testing without real API calls
+- **Graph SDK**: Uses official `@microsoft/microsoft-graph-client` SDK for all API calls
 
 ## Quick Start
 
@@ -70,6 +89,7 @@ npm install
 
 This will install the required dependencies including:
 - `@modelcontextprotocol/sdk` - MCP protocol implementation
+- `@microsoft/microsoft-graph-client` - Official Microsoft Graph SDK
 - `dotenv` - Environment variable management
 
 ## Azure App Registration & Configuration
@@ -86,7 +106,7 @@ To use this MCP server you need to first register and configure an app in Azure 
 6. Select the "Accounts in any organizational directory and personal Microsoft accounts" option
 7. In the "Redirect URI" section, select "Web" from the dropdown and enter "http://localhost:3333/auth/callback" in the textbox
 8. Click on "Register"
-9. From the Overview section of the app settings page, copy the "Application (client) ID" and enter it as the MS_CLIENT_ID in the .env file as well as the OUTLOOK_CLIENT_ID in the claude-config-sample.json file
+9. From the Overview section of the app settings page, copy the "Application (client) ID" and enter it as `OUTLOOK_CLIENT_ID` in both `.env` and `claude-config-sample.json`
 
 ### App Permissions
 
@@ -128,15 +148,14 @@ Edit `.env` and add your Azure credentials:
 
 ```bash
 # Get these values from Azure Portal > App Registrations > Your App
-MS_CLIENT_ID=your-application-client-id-here
-MS_CLIENT_SECRET=your-client-secret-VALUE-here
-USE_TEST_MODE=false
+OUTLOOK_CLIENT_ID=your-application-client-id-here
+OUTLOOK_CLIENT_SECRET=your-client-secret-VALUE-here
 ```
 
 **Important Notes:**
-- Use `MS_CLIENT_ID` and `MS_CLIENT_SECRET` in the `.env` file
-- For Claude Desktop config, you'll use `OUTLOOK_CLIENT_ID` and `OUTLOOK_CLIENT_SECRET`
-- Always use the client secret **VALUE**, never the Secret ID
+- Use `OUTLOOK_CLIENT_ID` and `OUTLOOK_CLIENT_SECRET` consistently in both `.env` and Claude Desktop config
+- Always use the client secret **VALUE** from Azure Portal, never the Secret ID
+- Both the auth server and MCP server read/write tokens from the same file: `~/.outlook-mcp-tokens.json`
 
 ### 2. Claude Desktop Configuration
 
@@ -151,7 +170,6 @@ Copy the configuration from `claude-config-sample.json` to your Claude Desktop c
         "/absolute/path/to/outlook-mcp/index.js"
       ],
       "env": {
-        "USE_TEST_MODE": "false",
         "OUTLOOK_CLIENT_ID": "your-client-id-here",
         "OUTLOOK_CLIENT_SECRET": "your-client-secret-here"
       }
@@ -165,10 +183,8 @@ Copy the configuration from `claude-config-sample.json` to your Claude Desktop c
 To configure server behavior, you can edit `config.js` to change:
 
 - Server name and version
-- Test mode settings
 - Authentication parameters
 - Email field selections
-- API endpoints
 
 ## Usage with Claude Desktop
 
@@ -184,7 +200,7 @@ To configure server behavior, you can edit `config.js` to change:
 You can test the server using:
 
 ```bash
-./test-modular-server.sh
+./scripts/test-modular-server.sh
 ```
 
 This will use the MCP Inspector to directly connect to the server and let you test the available tools.
@@ -238,7 +254,7 @@ Then restart the auth server: `npm run auth-server`
 1. Go to Azure Portal > App Registrations > Your App > Certificates & secrets
 2. Copy the **Value** column (not the Secret ID column)
 3. Update both:
-   - `.env` file: `MS_CLIENT_SECRET=actual-secret-value`
+   - `.env` file: `OUTLOOK_CLIENT_SECRET=actual-secret-value`
    - Claude Desktop config: `OUTLOOK_CLIENT_SECRET=actual-secret-value`
 4. Restart the auth server: `npm run auth-server`
 
@@ -269,7 +285,7 @@ Then restart the auth server: `npm run auth-server`
 #### Environment variables not loading
 **Solutions**:
 1. Ensure `.env` file exists in the project root
-2. Use `MS_CLIENT_ID` and `MS_CLIENT_SECRET` in `.env`
+2. Use `OUTLOOK_CLIENT_ID` and `OUTLOOK_CLIENT_SECRET` in `.env`
 3. Don't add quotes around values in `.env` file
 
 ### API and Runtime Issues

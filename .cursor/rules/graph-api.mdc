@@ -1,0 +1,53 @@
+---
+description: Microsoft Graph SDK usage patterns
+globs:
+  - "email/**/*.js"
+  - "calendar/**/*.js"
+  - "folder/**/*.js"
+  - "rules/**/*.js"
+  - "utils/graph-client.js"
+alwaysApply: false
+---
+
+# Graph API Rules
+
+## Client Access
+```js
+const { getGraphClient, graphGetPaginated } = require('../utils/graph-client');
+
+const client = await getGraphClient();
+```
+`getGraphClient()` already handles auth via `ensureAuthenticated()`. Do not add standalone auth calls in handlers.
+
+## Fluent SDK Usage
+Use the SDK fluent chain instead of raw HTTP requests:
+```js
+const result = await client.api('/me/messages')
+  .select(config.EMAIL_SELECT_FIELDS)
+  .top(25)
+  .orderby('receivedDateTime desc')
+  .get();
+```
+
+## Pagination
+For endpoints that may exceed one page, use:
+```js
+const response = await graphGetPaginated(client, 'me/messages', {
+  $top: 50,
+  $select: config.EMAIL_SELECT_FIELDS,
+  $orderby: 'receivedDateTime desc',
+}, maxCount);
+```
+`graphGetPaginated()` follows `@odata.nextLink` automatically up to `maxCount` items.
+
+## Field Selection
+Always use selection constants from `config.js`:
+- `EMAIL_SELECT_FIELDS`
+- `EMAIL_DETAIL_FIELDS`
+- `EMAIL_FULL_BODY_FIELDS`
+- `CALENDAR_SELECT_FIELDS`
+
+If a tool needs additional fields, update `config.js` first.
+
+## Auth Provider
+`utils/graph-client.js` defines `OutlookAuthProvider` implementing the SDK's auth interface. It delegates to `ensureAuthenticated()` from `auth/index.js`. The client singleton is recreated if the token changes (e.g. after refresh).

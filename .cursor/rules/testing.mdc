@@ -1,0 +1,68 @@
+---
+description: Jest testing conventions and mock patterns
+globs:
+  - "test/**/*.test.js"
+  - "__mocks__/**/*.js"
+alwaysApply: false
+---
+
+# Testing Rules
+
+## Framework
+Jest (`npm test`). Tests live in `test/` mirroring source structure:
+- `email/list.js` → `test/email/list.test.js`
+- `auth/token-manager.js` → `test/auth/token-manager.test.js`
+
+## Response Format in Tests
+Tests assert against plain-text output. Set text mode at the top of every test file **before** imports:
+```js
+process.env.OUTLOOK_RESPONSE_FORMAT = 'text';
+```
+
+## Mock Pattern
+Mock the Graph client and any module-level dependencies:
+```js
+const { getGraphClient, graphGetPaginated } = require('../../utils/graph-client');
+jest.mock('../../utils/graph-client');
+
+const mockClient = {};
+beforeEach(() => {
+  jest.clearAllMocks();
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  getGraphClient.mockResolvedValue(mockClient);
+});
+afterEach(() => {
+  console.error.mockRestore();
+});
+```
+
+## Assertion Style
+- Check `result.content[0].text` for response content
+- Check `result.isError` for error responses
+- Verify mock call arguments with `expect.objectContaining()`
+
+## Test Structure
+Use nested `describe` blocks:
+```js
+describe('handlerName', () => {
+  describe('successful operation', () => { ... });
+  describe('empty results', () => { ... });
+  describe('error handling', () => {
+    test('should handle authentication error', ...);
+    test('should handle Graph API error', ...);
+  });
+});
+```
+
+## Auth Error Testing
+```js
+test('should handle authentication error', async () => {
+  const authError = new Error('Authentication required');
+  authError.isAuthError = true;
+  getGraphClient.mockRejectedValue(authError);
+
+  const result = await handler({});
+  expect(result.isError).toBe(true);
+  expect(result.content[0].text).toBe('Authentication required');
+});
+```

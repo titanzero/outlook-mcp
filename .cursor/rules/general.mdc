@@ -1,0 +1,26 @@
+---
+description: Core project conventions for the Outlook MCP server
+alwaysApply: true
+---
+
+# Core Conventions
+
+- Use CommonJS (`require` / `module.exports`) in plain JavaScript; do not use ESM.
+- Keep shared constants in `config.js`; avoid hard-coded field lists, pagination, URLs, and timezone values.
+- Build MCP responses with `makeResponse()` and `makeErrorResponse()` from `utils/response-helpers.js`.
+- Detect auth failures with `isAuthError(error)` and return the auth message directly.
+- For data output, call `formatResponse(structuredData, textFallback)` from `utils/response-formatter.js`.
+- Log diagnostics with `console.error()` (stdout is reserved for MCP protocol traffic).
+
+## Baseline Error Pattern
+
+```js
+try {
+  // handler logic
+} catch (error) {
+  if (isAuthError(error)) {
+    return makeErrorResponse(error.message);
+  }
+  return makeErrorResponse(`Error doing X: ${error.message}`);
+}
+```

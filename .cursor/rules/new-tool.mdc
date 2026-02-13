@@ -1,0 +1,74 @@
+---
+description: Step-by-step guide for adding a new MCP tool
+globs:
+  - "email/**/*.js"
+  - "calendar/**/*.js"
+  - "folder/**/*.js"
+  - "rules/**/*.js"
+alwaysApply: false
+---
+
+# Adding a New MCP Tool
+
+## Steps
+
+### 1. Create the handler file
+Create `<module>/<action>.js` (example: `email/archive.js`) and keep the handler focused on business logic plus Graph calls:
+
+```js
+const { getGraphClient } = require('../utils/graph-client');
+const { formatResponse } = require('../utils/response-formatter');
+const { makeResponse } = require('../utils/response-helpers');
+
+async function handleArchiveEmail(args) {
+  const client = await getGraphClient();
+  // ... Graph API call ...
+  const text = formatResponse(structuredData, textFallback);
+  return makeResponse(text);
+}
+
+module.exports = handleArchiveEmail;
+```
+Follow core conventions from `general.mdc` for error handling and shared response patterns.
+
+### 2. Register in module index
+Edit `<module>/index.js`:
+
+```js
+const handleArchiveEmail = require('./archive');
+
+const emailTools = [
+  // ... existing tools ...
+  {
+    name: "archive-email",
+    description: "Moves an email to the archive folder",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string", description: "Email ID to archive" }
+      },
+      required: ["id"]
+    },
+    handler: handleArchiveEmail
+  }
+];
+```
+
+Use the module's `{module}Tools` array (`emailTools`, `calendarTools`, etc.). The root `index.js` aggregates these arrays into `TOOLS`.
+
+### 3. Add config fields if needed
+If the tool needs new Graph API field selections or constants, add them to `config.js`.
+
+### 4. Write tests
+Create `test/<module>/<action>.test.js` following the patterns in the testing rule.
+
+### 5. Update CLAUDE.md
+Update docs when the tool adds new capabilities or config requirements.
+
+## Checklist
+- [ ] Handler file exports one async handler function
+- [ ] Handler uses `getGraphClient()` and Graph SDK fluent calls
+- [ ] Tool registered in `<module>/index.js` under `{module}Tools` with `name`, `description`, `inputSchema`, `handler`
+- [ ] New constants/field sets are added in `config.js` when required
+- [ ] Test file created in `test/<module>/` (follow `testing.mdc`)
+- [ ] Core conventions in `general.mdc` are followed
