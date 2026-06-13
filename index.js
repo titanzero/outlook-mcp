@@ -14,6 +14,9 @@ const { calendarTools } = require('./calendar');
 const { emailTools } = require('./email');
 const { folderTools } = require('./folder');
 const { rulesTools } = require('./rules');
+const { contactsTools } = require('./contacts');
+const { mailboxTools } = require('./mailbox');
+const { tasksTools } = require('./tasks');
 
 console.error(`STARTING ${config.SERVER_NAME.toUpperCase()} MCP SERVER`);
 
@@ -23,6 +26,9 @@ const TOOLS = [
   ...emailTools,
   ...folderTools,
   ...rulesTools,
+  ...contactsTools,
+  ...mailboxTools,
+  ...tasksTools,
 ];
 
 const server = new Server(
