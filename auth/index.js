@@ -36,6 +36,10 @@ function buildAuthError() {
         message = 'Authentication failed: Microsoft rejected the client credentials (invalid_client). ' +
           'Double-check that OUTLOOK_CLIENT_ID and OUTLOOK_CLIENT_SECRET are correctly configured (using the Azure client secret VALUE, not the Secret ID), then re-authenticate.';
         break;
+      case 'REFRESH_FAILED_NO_REFRESH_TOKEN':
+        message = 'Authentication required: no refresh token found. ' +
+          'Please run the \'authenticate\' tool to sign in again.';
+        break;
       case 'REFRESH_NETWORK_ERROR':
       case 'CODE_EXCHANGE_NETWORK_ERROR':
         message = `Authentication failed due to a network error talking to Microsoft: ${reason.message}. ` +

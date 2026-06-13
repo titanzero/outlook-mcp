@@ -127,7 +127,7 @@ async function loadTokens() {
  */
 async function saveTokens(tokens) {
   if (!tokens) {
-    console.warn('[token-manager] No tokens to save');
+    console.error('[token-manager] No tokens to save');
     return;
   }
 
@@ -186,7 +186,11 @@ async function refreshAccessToken() {
   }
 
   if (!refreshToken) {
-    throw new Error('No refresh token available');
+    // Only record this error if there isn't already a more specific one (e.g. TOKEN_FILE_MISSING)
+    if (!lastErrorReason) {
+      setLastError('REFRESH_FAILED_NO_REFRESH_TOKEN', 'No refresh token found. Please re-authenticate.');
+    }
+    throw new Error('No refresh token available. Please re-authenticate.');
   }
 
   console.error('[token-manager] Refreshing access token…');

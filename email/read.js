@@ -113,19 +113,15 @@ ${body}`;
       
       return makeResponse(text);
     } catch (error) {
+      if (isAuthError(error)) throw error;
       console.error(`Error reading email: ${error.message}`);
-      
-      // Improved error handling with more specific messages
       if (error.message.includes("doesn't belong to the targeted mailbox")) {
         return makeErrorResponse('The email ID seems invalid or doesn\'t belong to your mailbox. Please try with a different email ID.');
       }
       return makeErrorResponse(`Failed to read email: ${error.message}`);
     }
   } catch (error) {
-    if (isAuthError(error)) {
-      return makeErrorResponse(error.message);
-    }
-    
+    if (isAuthError(error)) return makeErrorResponse(error.message);
     return makeErrorResponse(`Error accessing email: ${error.message}`);
   }
 }

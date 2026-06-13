@@ -201,7 +201,7 @@ describe('token-manager', () => {
       await tokenManager.saveTokens(null);
 
       expect(fsPromises.writeFile).not.toHaveBeenCalled();
-      expect(console.warn).toHaveBeenCalledWith('[token-manager] No tokens to save');
+      expect(console.error).toHaveBeenCalledWith('[token-manager] No tokens to save');
     });
   });
 

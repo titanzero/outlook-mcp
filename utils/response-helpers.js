@@ -22,7 +22,9 @@ function isAuthError(error) {
     error.isAuthError ||
     error.authReason ||
     message === 'Authentication required' ||
-    message.startsWith('Authentication required')
+    message.startsWith('Authentication required') ||
+    error.statusCode === 401 ||
+    error.statusCode === 403
   );
 }
 

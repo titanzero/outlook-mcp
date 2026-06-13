@@ -26,26 +26,18 @@ async function handleMarkAsRead(args) {
     
     try {
       await client.api(`me/messages/${emailId}`).patch(updateData);
-      
       const status = isRead ? 'read' : 'unread';
-      
       return makeResponse(`Email successfully marked as ${status}.`);
     } catch (error) {
+      if (isAuthError(error)) throw error;
       console.error(`Error marking email as ${isRead ? 'read' : 'unread'}: ${error.message}`);
-      
-      // Improved error handling with more specific messages
       if (error.message.includes("doesn't belong to the targeted mailbox")) {
         return makeErrorResponse('The email ID seems invalid or doesn\'t belong to your mailbox. Please try with a different email ID.');
-      } else if (error.message.includes("UNAUTHORIZED")) {
-        return makeErrorResponse('Authentication failed. Please re-authenticate and try again.');
       }
       return makeErrorResponse(`Failed to mark email as ${isRead ? 'read' : 'unread'}: ${error.message}`);
     }
   } catch (error) {
-    if (isAuthError(error)) {
-      return makeErrorResponse(error.message);
-    }
-    
+    if (isAuthError(error)) return makeErrorResponse(error.message);
     return makeErrorResponse(`Error accessing email: ${error.message}`);
   }
 }
