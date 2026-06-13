@@ -6,13 +6,13 @@
 
 # Outlook MCP Server
 
-**Let AI manage your Outlook inbox, calendar, and rules — through natural language.**
+**Let AI manage your Outlook inbox, calendar, contacts, tasks and rules — through natural language.**
 
 Built on [Model Context Protocol](https://modelcontextprotocol.io) · Powered by [Microsoft Graph API](https://learn.microsoft.com/en-us/graph/overview)
 
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D14-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![MCP SDK](https://img.shields.io/badge/MCP_SDK-1.1-blueviolet)](https://www.npmjs.com/package/@modelcontextprotocol/sdk)
+[![MCP SDK](https://img.shields.io/badge/MCP_SDK-1.29-blueviolet)](https://www.npmjs.com/package/@modelcontextprotocol/sdk)
 
 </div>
 
@@ -23,8 +23,9 @@ Built on [Model Context Protocol](https://modelcontextprotocol.io) · Powered by
 This MCP server turns Claude into a full-featured **Outlook assistant**. Instead of clicking through the Outlook UI, just ask Claude:
 
 > *"Show me unread emails from this week"*
-> *"Schedule a meeting with Alice tomorrow at 3pm"*
-> *"Create a rule to move all GitHub notifications to a folder"*
+> *"Schedule a meeting with Alice tomorrow at 3pm and check if she's free first"*
+> *"Forward that email to my team and create a follow-up task"*
+> *"Set my out-of-office until Friday"*
 
 Claude handles authentication, API calls, pagination, filtering — everything. You just talk.
 
@@ -32,13 +33,18 @@ Claude handles authentication, API calls, pagination, filtering — everything. 
 
 ## Capabilities
 
-| Area | What Claude can do |
-|---|---|
-| **Email** | List, search, read (preview or full body), send, mark read/unread |
-| **Calendar** | List upcoming events, create, accept, decline, cancel, delete |
-| **Folders** | List folder hierarchy, create folders, move emails between folders |
-| **Rules** | List inbox rules, create new rules, change rule execution order |
-| **Auth** | OAuth 2.0 with automatic token refresh — authenticate once, use forever |
+| Area | Tools | What Claude can do |
+|---|---|---|
+| **Email** | 13 | List, search, read (preview or full body), send, reply, reply-all, forward, delete, mark read/unread, manage drafts, list and download attachments |
+| **Calendar** | 10 | List calendars, list events, create, update, accept, tentatively accept, decline, cancel, delete, check free/busy schedules |
+| **Folders** | 3 | List folder hierarchy, create folders, move emails between folders |
+| **Contacts** | 4 | List/search, create, update, delete contacts in your address book |
+| **Mailbox** | 2 | Get mailbox settings (timezone, language), set out-of-office auto-replies |
+| **Tasks** | 5 | List task lists, list tasks, create, complete, delete (Microsoft To Do) |
+| **Rules** | 5 | List, create, update, delete inbox rules and change rule execution order |
+| **Auth** | 3 | OAuth 2.0 with automatic token refresh — authenticate once, use forever |
+
+**45 tools total.**
 
 ---
 
@@ -87,10 +93,18 @@ Go to **API permissions** → **Add a permission** → **Microsoft Graph** → *
 - `offline_access`
 - `User.Read`
 - `Mail.Read`
+- `Mail.ReadWrite`
 - `Mail.Send`
 - `Calendars.Read`
 - `Calendars.ReadWrite`
 - `Contacts.Read`
+- `Contacts.ReadWrite`
+- `MailboxSettings.Read`
+- `MailboxSettings.ReadWrite`
+- `MailboxFolder.Read`
+- `MailboxFolder.ReadWrite`
+- `Tasks.Read`
+- `Tasks.ReadWrite`
 
 </details>
 
@@ -180,10 +194,15 @@ config.js                 ── centralized constants & settings
 outlook-auth-server.js    ── standalone OAuth server
 
 auth/                     ── authentication & token management
-email/                    ── list, search, read, send, mark-as-read
-calendar/                 ── list, create, accept, decline, cancel, delete
+email/                    ── list, search, read, send, reply, forward, delete,
+│                            mark-as-read, attachments, drafts
+calendar/                 ── list calendars & events, create, update, accept,
+│                            tentatively-accept, decline, cancel, delete, free-busy
 folder/                   ── list, create, move
-rules/                    ── list, create, edit-rule-sequence
+contacts/                 ── list, create, update, delete
+mailbox/                  ── settings, out-of-office
+tasks/                    ── task lists and tasks (Microsoft To Do)
+rules/                    ── list, create, update, delete, edit-sequence
 
 utils/
 ├── graph-client.js       ── Graph SDK wrapper with pagination
