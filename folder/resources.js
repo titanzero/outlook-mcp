@@ -29,7 +29,7 @@ function registerFolderResources(server) {
     },
     async (uri, { folderName }) => {
       try {
-        const client = await getGraphClient();
+        const _client = await getGraphClient();
         const folders = await getAllFolders();
 
         // Find folder by name or path
@@ -50,7 +50,7 @@ function registerFolderResources(server) {
           wellKnownName: folder.wellKnownName || null,
         };
 
-        const textFallback = [
+        const _textFallback = [
           `Folder: ${folder.displayName}`,
           `Path: ${folder.path || folder.displayName}`,
           `ID: ${folder.id}`,
@@ -150,7 +150,7 @@ function registerFolderResources(server) {
             .join('\n');
         }
 
-        const textFallback = `Mail Folder Hierarchy:\n\n${formatTree(tree)}`;
+        const _textFallback = `Mail Folder Hierarchy:\n\n${formatTree(tree)}`;
 
         return {
           contents: [

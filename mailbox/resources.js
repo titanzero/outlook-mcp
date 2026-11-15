@@ -52,7 +52,7 @@ function registerMailboxResources(server) {
         const ars = structured.automaticReplies;
         const wh = structured.workingHours;
 
-        const textFallback = [
+        const __textFallback = [
           `Timezone: ${structured.timeZone}`,
           `Language: ${structured.language || 'not set'}`,
           `Date Format: ${structured.dateFormat || 'not set'}`,
@@ -123,7 +123,7 @@ function registerMailboxResources(server) {
           preferredLanguage: user.preferredLanguage,
         };
 
-        const textFallback = [
+        const __textFallback = [
           `User: ${user.displayName}`,
           `ID: ${user.id}`,
           `UPN: ${user.userPrincipalName}`,

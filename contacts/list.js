@@ -1,4 +1,4 @@
-const { getGraphClient, graphGetPaginated } = require('../utils/graph-client');
+const { getGraphClient } = require('../utils/graph-client');
 const { formatResponse } = require('../utils/response-formatter');
 const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
 const config = require('../config');

@@ -38,7 +38,7 @@ function registerTasksResources(server) {
           wellKnownName: l.wellKnownListName,
         }));
 
-        const textFallback =
+        const _textFallback =
           lists.length === 0
             ? 'No task lists found.'
             : `Task Lists (${lists.length}):\n\n` +
@@ -117,7 +117,7 @@ function registerTasksResources(server) {
           })),
         };
 
-        const textFallback = [
+        const _textFallback = [
           `Task List: ${list.displayName}`,
           `ID: ${list.id}`,
           `Tasks: ${tasks.length}`,
@@ -188,7 +188,7 @@ function registerTasksResources(server) {
           linkedResources: task.linkedResources || [],
         };
 
-        const textFallback = [
+        const _textFallback = [
           `Task: ${task.title}`,
           `ID: ${task.id}`,
           `Status: ${task.status}`,

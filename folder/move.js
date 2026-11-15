@@ -57,10 +57,10 @@ async function handleMoveEmails(args) {
  * @param {object} client - Microsoft Graph SDK client
  * @param {Array<string>} emailIds - Array of email IDs to move
  * @param {string} targetFolderName - Name of the target folder
- * @param {string} sourceFolderName - Name of the source folder (optional)
+ * @param {string} _sourceFolderName - Name of the source folder (optional)
  * @returns {Promise<object>} - Result object with status and message
  */
-async function moveEmailsToFolder(client, emailIds, targetFolderName, sourceFolderName) {
+async function moveEmailsToFolder(client, emailIds, targetFolderName, _sourceFolderName) {
   try {
     // Get the target folder ID
     const targetFolderId = await getFolderIdByName(targetFolderName);

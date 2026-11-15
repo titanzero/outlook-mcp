@@ -104,17 +104,17 @@ async function loadTokens() {
       // Successful load clears any previous error
       lastErrorReason = null;
       return tokens;
-    } catch (error) {
-      if (error.code === 'ENOENT') {
+    } catch (_error) {
+      if (_error.code === 'ENOENT') {
         console.error(`[token-manager] Token file not found at ${tokenPath}`);
         setLastError('TOKEN_FILE_MISSING', `Token file not found at ${tokenPath}`, {
           path: tokenPath,
         });
       } else {
-        console.error('[token-manager] Error loading tokens:', error.message);
+        console.error('[token-manager] Error loading tokens:', _error.message);
         setLastError(
           'TOKEN_FILE_READ_ERROR',
-          `Error loading token file at ${tokenPath}: ${error.message}`,
+          `Error loading token file at ${tokenPath}: ${_error.message}`,
           { path: tokenPath }
         );
       }
@@ -288,10 +288,10 @@ async function refreshAccessToken() {
       });
     });
 
-    req.on('error', error => {
-      console.error('[token-manager] Network error during refresh:', error.message);
-      setLastError('REFRESH_NETWORK_ERROR', `Network error during token refresh: ${error.message}`);
-      reject(error);
+    req.on('error', _error => {
+      console.error('[token-manager] Network error during refresh:', _error.message);
+      setLastError('REFRESH_NETWORK_ERROR', `Network error during token refresh: ${_error.message}`);
+      reject(_error);
     });
 
     req.write(postData);
@@ -328,8 +328,8 @@ async function getAccessToken() {
   try {
     const refreshed = await refreshAccessToken();
     return refreshed.access_token;
-  } catch (error) {
-    console.error('[token-manager] Refresh failed:', error.message);
+  } catch (_error) {
+    console.error('[token-manager] Refresh failed:', _error.message);
     // refreshAccessToken will have already set a detailed lastErrorReason
     return null;
   }
@@ -419,13 +419,13 @@ async function exchangeCodeForTokens(authCode) {
       });
     });
 
-    req.on('error', error => {
-      console.error('[token-manager] Network error during code exchange:', error.message);
+    req.on('error', _error => {
+      console.error('[token-manager] Network error during code exchange:', _error.message);
       setLastError(
         'CODE_EXCHANGE_NETWORK_ERROR',
-        `Network error during code exchange: ${error.message}`
+        `Network error during code exchange: ${_error.message}`
       );
-      reject(error);
+      reject(_error);
     });
 
     req.write(postData);
@@ -441,11 +441,11 @@ async function clearTokens() {
   try {
     await fs.unlink(config.AUTH_CONFIG.tokenStorePath);
     console.error('[token-manager] Token file deleted');
-  } catch (error) {
-    if (error.code === 'ENOENT') {
+  } catch (_error) {
+    if (_error.code === 'ENOENT') {
       console.error('[token-manager] Token file not found, nothing to delete');
     } else {
-      console.error('[token-manager] Error deleting token file:', error.message);
+      console.error('[token-manager] Error deleting token file:', _error.message);
     }
   }
 }

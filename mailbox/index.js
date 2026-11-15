@@ -4,7 +4,7 @@ const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/respo
 const { registerMailboxResources } = require('./resources');
 const { z } = require('zod');
 
-async function handleGetMailboxSettings(args) {
+async function handleGetMailboxSettings(_args) {
   try {
     const client = await getGraphClient();
     const settings = await client.api('me/mailboxSettings').get();
@@ -45,8 +45,8 @@ async function handleGetMailboxSettings(args) {
   }
 }
 
-async function handleSetOutOfOffice(args) {
-  const { status, internalMessage, externalMessage, startTime, endTime } = args;
+async function handleSetOutOfOffice(_args) {
+  const { status, internalMessage, externalMessage, startTime, endTime } = _args;
 
   if (!status) {
     return makeErrorResponse('status is required: "enabled", "scheduled", or "disabled".');

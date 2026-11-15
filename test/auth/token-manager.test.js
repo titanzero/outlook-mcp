@@ -3,8 +3,6 @@
  * Replaces the old token-storage.test.js.
  */
 const fs = require('fs').promises;
-const https = require('https');
-const path = require('path');
 
 // Mock fs.promises and https before requiring the module
 jest.mock('fs', () => ({

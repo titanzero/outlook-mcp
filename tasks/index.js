@@ -4,7 +4,7 @@ const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/respo
 const { registerTasksResources } = require('./resources');
 const { z } = require('zod');
 
-async function handleListTaskLists(args) {
+async function handleListTaskLists(_args) {
   try {
     const client = await getGraphClient();
     const response = await client
@@ -36,8 +36,8 @@ async function handleListTaskLists(args) {
   }
 }
 
-async function handleListTasks(args) {
-  const { listId, includeCompleted = false } = args;
+async function handleListTasks(_args) {
+  const { listId, includeCompleted = false } = _args;
 
   if (!listId) {
     return makeErrorResponse('listId is required (from list-task-lists).');

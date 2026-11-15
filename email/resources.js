@@ -6,7 +6,7 @@ const { getGraphClient, graphGetPaginated } = require('../utils/graph-client');
 const { resolveFolderPath } = require('./folder-utils');
 const { isAuthError } = require('../utils/response-helpers');
 const { ResourceTemplate } = require('@modelcontextprotocol/sdk/server/mcp.js');
-const { getEmailFolderCompletions, getEventCompletions } = require('../completion');
+const { getEventCompletions } = require('../completion');
 
 /**
  * Register email resources with the MCP server
@@ -67,7 +67,7 @@ function registerEmailResources(server) {
           };
         });
 
-        const textFallback =
+        const __textFallback =
           emails.length === 0
             ? `No emails found in ${folder}.`
             : `Emails in ${folder} (${emails.length}):\n\n` +
@@ -165,7 +165,7 @@ function registerEmailResources(server) {
             : null,
         };
 
-        const textFallback = [
+        const __textFallback = [
           `Email: ${email.subject}`,
           `ID: ${email.id}`,
           `From: ${sender.name} <${sender.address}>`,
@@ -241,7 +241,7 @@ function registerEmailResources(server) {
           lastModifiedDateTime: d.lastModifiedDateTime,
         }));
 
-        const textFallback =
+        const __textFallback =
           drafts.length === 0
             ? 'No drafts found.'
             : `Drafts (${drafts.length}):\n\n` +
@@ -304,7 +304,7 @@ function registerEmailResources(server) {
           categories: draft.categories || [],
         };
 
-        const textFallback = [
+        const __textFallback = [
           `Draft: ${draft.subject || '(no subject)'}`,
           `ID: ${draft.id}`,
           `To: ${structured.to.join(', ') || 'none'}`,

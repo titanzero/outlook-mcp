@@ -15,19 +15,7 @@ function parseAddress(csv) {
   });
 }
 
-function parsePhones(csv) {
-  if (!csv) {
-    return undefined;
-  }
-  const phones = {};
-  csv.split(',').forEach(p => {
-    const [type, number] = p.split(':').map(s => s.trim());
-    if (type && number) {
-      phones[type] = number;
-    }
-  });
-  return Object.keys(phones).length ? phones : undefined;
-}
+
 
 /**
  * Create contact with full fields handler

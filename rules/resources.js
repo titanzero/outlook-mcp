@@ -75,7 +75,7 @@ function registerRulesResources(server) {
             : null,
         }));
 
-        const textFallback =
+        const __textFallback =
           rules.length === 0
             ? 'No inbox rules found.'
             : `Inbox Rules (${rules.length}):\n\n` +
@@ -172,7 +172,7 @@ function registerRulesResources(server) {
             : null,
         };
 
-        const textFallback = [
+        const __textFallback = [
           `Rule: ${rule.displayName}`,
           `ID: ${rule.id}`,
           `Sequence: ${rule.sequence}`,

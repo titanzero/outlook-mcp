@@ -64,7 +64,7 @@ function registerContactsResources(server) {
           imAddresses: contact.imAddresses || [],
         };
 
-        const textFallback = [
+        const __textFallback = [
           `Contact: ${contact.displayName}`,
           `ID: ${contact.id}`,
           contact.emailAddresses
@@ -123,7 +123,7 @@ function registerContactsResources(server) {
           contactCount: f.contactCount || 0,
         }));
 
-        const textFallback =
+        const __textFallback =
           folders.length === 0
             ? 'No contact folders found.'
             : `Contact Folders (${folders.length}):\n\n` +
@@ -186,7 +186,7 @@ function registerContactsResources(server) {
           })),
         };
 
-        const textFallback = [
+        const __textFallback = [
           `Contact Folder: ${folder.displayName}`,
           `ID: ${folder.id}`,
           `Contacts: ${contacts.length}`,

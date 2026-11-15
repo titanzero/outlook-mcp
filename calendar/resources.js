@@ -41,7 +41,7 @@ function registerCalendarResources(server) {
           owner: c.owner?.address || c.owner?.name,
         }));
 
-        const textFallback =
+        const __textFallback =
           calendars.length === 0
             ? 'No calendars found.'
             : `Calendars (${calendars.length}):\n\n` +
@@ -126,7 +126,7 @@ function registerCalendarResources(server) {
           })),
         };
 
-        const textFallback = [
+        const __textFallback = [
           `Calendar: ${calendar.name}`,
           `ID: ${calendar.id}`,
           calendar.isDefaultCalendar ? '(DEFAULT CALENDAR)' : '',
@@ -201,7 +201,7 @@ function registerCalendarResources(server) {
           attendees: e.attendees?.map(a => a.emailAddress?.address).filter(Boolean) || [],
         }));
 
-        const textFallback =
+        const __textFallback =
           events.length === 0
             ? 'No events in the next 30 days.'
             : `Events (next 30 days, ${events.length}):\n\n` +
@@ -280,7 +280,7 @@ function registerCalendarResources(server) {
           onlineMeeting: event.onlineMeeting,
         };
 
-        const textFallback = [
+        const __textFallback = [
           `Event: ${event.subject}`,
           `ID: ${event.id}`,
           `When: ${event.start?.dateTime} (${event.start?.timeZone}) to ${event.end?.dateTime} (${event.end?.timeZone})`,

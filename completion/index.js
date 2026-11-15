@@ -216,7 +216,7 @@ async function getEmailFolderCompletions(value) {
  * This is called from each resource module to add completions
  * @param {McpServer} server - The MCP server instance
  */
-function registerCompletionCallbacks(server) {
+function registerCompletionCallbacks(_server) {
   // The completions are registered on resource templates via the ResourceTemplate class
   // when using server.resource() with a template that has completeCallback
   // This function is a placeholder for future use if needed

@@ -2,7 +2,7 @@ const { getGraphClient } = require('../utils/graph-client');
 const { formatResponse } = require('../utils/response-formatter');
 const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
 
-async function handleListCalendars(args) {
+async function handleListCalendars(_args) {
   try {
     const client = await getGraphClient();
     const response = await client
