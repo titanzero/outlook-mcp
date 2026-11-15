@@ -1,6 +1,8 @@
 const { getGraphClient } = require('../utils/graph-client');
 const { formatResponse } = require('../utils/response-formatter');
 const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
+const { registerMailboxResources } = require('./resources');
+const { z } = require('zod');
 
 async function handleGetMailboxSettings(args) {
   try {
@@ -71,37 +73,49 @@ async function handleSetOutOfOffice(args) {
   }
 }
 
-const mailboxTools = [
-  {
-    name: "get-mailbox-settings",
-    description: "Returns mailbox settings including timezone, language, and auto-reply (out-of-office) status",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: []
+/**
+ * Register mailbox tools with the MCP server
+ * @param {McpServer} server - The MCP server instance
+ */
+function registerMailboxTools(server) {
+  server.tool(
+    "get-mailbox-settings",
+    "Returns mailbox settings including timezone, language, and auto-reply (out-of-office) status",
+    {},
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false
+      }
     },
-    handler: handleGetMailboxSettings
-  },
-  {
-    name: "set-out-of-office",
-    description: "Enables, schedules, or disables automatic out-of-office replies",
-    inputSchema: {
-      type: "object",
-      properties: {
-        status: {
-          type: "string",
-          description: "Auto-reply status",
-          enum: ["enabled", "scheduled", "disabled"]
-        },
-        internalMessage: { type: "string", description: "Reply message for people inside your organisation" },
-        externalMessage: { type: "string", description: "Reply message for people outside your organisation" },
-        startTime: { type: "string", description: "ISO 8601 start time (required when status is 'scheduled')" },
-        endTime: { type: "string", description: "ISO 8601 end time (required when status is 'scheduled')" }
-      },
-      required: ["status"]
-    },
-    handler: handleSetOutOfOffice
-  }
-];
+    handleGetMailboxSettings
+  );
 
-module.exports = { mailboxTools };
+  server.tool(
+    "set-out-of-office",
+    "Enables, schedules, or disables automatic out-of-office replies",
+    {
+      status: z.enum(["enabled", "scheduled", "disabled"]).describe("Auto-reply status"),
+      internalMessage: z.string().optional().describe("Reply message for people inside your organisation"),
+      externalMessage: z.string().optional().describe("Reply message for people outside your organisation"),
+      startTime: z.string().optional().describe("ISO 8601 start time (required when status is 'scheduled')"),
+      endTime: z.string().optional().describe("ISO 8601 end time (required when status is 'scheduled')")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false
+      }
+    },
+    handleSetOutOfOffice
+  );
+}
+
+module.exports = {
+  registerMailboxTools,
+  registerMailboxResources,
+  handleGetMailboxSettings,
+  handleSetOutOfOffice
+};

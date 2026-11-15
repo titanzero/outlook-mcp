@@ -4,75 +4,111 @@
 const handleListFolders = require('./list');
 const handleCreateFolder = require('./create');
 const handleMoveEmails = require('./move');
+const handleRenameFolder = require('./rename');
+const handleDeleteFolder = require('./delete');
+const { registerFolderResources } = require('./resources');
+const { z } = require('zod');
 
-// Folder management tool definitions
-const folderTools = [
-  {
-    name: "list-folders",
-    description: "Lists mail folders in your Outlook account",
-    inputSchema: {
-      type: "object",
-      properties: {
-        includeItemCounts: {
-          type: "boolean",
-          description: "Include counts of total and unread items"
-        },
-        includeChildren: {
-          type: "boolean",
-          description: "Include child folders in hierarchy"
-        }
-      },
-      required: []
+/**
+ * Register folder tools with the MCP server
+ * @param {McpServer} server - The MCP server instance
+ */
+function registerFolderTools(server) {
+  server.tool(
+    "list-folders",
+    "Lists mail folders in your Outlook account",
+    {
+      includeItemCounts: z.boolean().optional().describe("Include counts of total and unread items"),
+      includeChildren: z.boolean().optional().describe("Include child folders in hierarchy")
     },
-    handler: handleListFolders
-  },
-  {
-    name: "create-folder",
-    description: "Creates a new mail folder",
-    inputSchema: {
-      type: "object",
-      properties: {
-        name: {
-          type: "string",
-          description: "Name of the folder to create"
-        },
-        parentFolder: {
-          type: "string",
-          description: "Optional parent folder name (default is root)"
-        }
-      },
-      required: ["name"]
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false
+      }
     },
-    handler: handleCreateFolder
-  },
-  {
-    name: "move-emails",
-    description: "Moves emails from one folder to another",
-    inputSchema: {
-      type: "object",
-      properties: {
-        emailIds: {
-          type: "string",
-          description: "Comma-separated list of email IDs to move"
-        },
-        targetFolder: {
-          type: "string",
-          description: "Name of the folder to move emails to"
-        },
-        sourceFolder: {
-          type: "string",
-          description: "Optional name of the source folder (default is inbox)"
-        }
-      },
-      required: ["emailIds", "targetFolder"]
+    handleListFolders
+  );
+
+  server.tool(
+    "create-folder",
+    "Creates a new mail folder",
+    {
+      name: z.string().describe("Name of the folder to create"),
+      parentFolder: z.string().optional().describe("Optional parent folder name (default is root)")
     },
-    handler: handleMoveEmails
-  }
-];
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: false
+      }
+    },
+    handleCreateFolder
+  );
+
+  server.tool(
+    "move-emails",
+    "Moves emails from one folder to another",
+    {
+      emailIds: z.string().describe("Comma-separated list of email IDs to move"),
+      targetFolder: z.string().describe("Name of the folder to move emails to"),
+      sourceFolder: z.string().optional().describe("Optional name of the source folder (default is inbox)")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false
+      }
+    },
+    handleMoveEmails
+  );
+
+  server.tool(
+    "rename-folder",
+    "Renames an existing mail folder",
+    {
+      name: z.string().describe("Current name of the folder to rename"),
+      newName: z.string().describe("New name for the folder")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false
+      }
+    },
+    handleRenameFolder
+  );
+
+  server.tool(
+    "delete-folder",
+    "Deletes a mail folder. Cannot delete well-known folders (Inbox, Drafts, Sent Items, etc.) or non-empty folders.",
+    {
+      name: z.string().describe("Name of the folder to delete")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: false
+      }
+    },
+    handleDeleteFolder
+  );
+}
 
 module.exports = {
-  folderTools,
+  registerFolderTools,
+  registerFolderResources,
   handleListFolders,
   handleCreateFolder,
-  handleMoveEmails
+  handleMoveEmails,
+  handleRenameFolder,
+  handleDeleteFolder
 };

@@ -2,7 +2,7 @@
  * Authentication module for Outlook MCP server
  */
 const tokenManager = require('./token-manager');
-const { authTools } = require('./tools');
+const { registerAuthTools } = require('./tools');
 
 /**
  * Build a rich authentication error that callers (tools) can inspect
@@ -29,7 +29,7 @@ function buildAuthError() {
         break;
       case 'CLIENT_CONFIG_MISSING':
         message = 'Authentication configuration is missing: OUTLOOK_CLIENT_ID and/or OUTLOOK_CLIENT_SECRET are not set. ' +
-          'Update your Claude Desktop config to include these env vars (using the Azure client ID and secret VALUE), restart Claude, then authenticate again.';
+          'Update your MCP client config to include these env vars (using the Azure client ID and secret VALUE), then authenticate again.';
         break;
       case 'REFRESH_FAILED_INVALID_CLIENT':
       case 'CODE_EXCHANGE_INVALID_CLIENT':
@@ -84,6 +84,6 @@ async function ensureAuthenticated(forceNew = false) {
 
 module.exports = {
   tokenManager,
-  authTools,
+  registerAuthTools,
   ensureAuthenticated
 };
