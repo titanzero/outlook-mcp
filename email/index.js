@@ -8,6 +8,10 @@ const handleForwardEmail = require('./forward');
 const handleDeleteEmail = require('./delete');
 const { handleListAttachments, handleDownloadAttachment } = require('./attachments');
 const { handleCreateDraft, handleUpdateDraft, handleSendDraft } = require('./draft');
+const handleFlagEmail = require('./flag');
+const handleCategorizeEmail = require('./categorize');
+const handleUploadAttachment = require('./upload-attachment');
+const handleDeleteAttachment = require('./delete-attachment');
 const { z } = require('zod');
 
 /**
@@ -101,6 +105,46 @@ function registerEmailTools(server) {
     handleDownloadAttachment
   );
 
+  // Attachment management tools (for drafts)
+  server.tool(
+    "upload-attachment",
+    "Uploads an attachment to an email or draft. Provide base64-encoded content.",
+    {
+      id: z.string().describe("ID of the email or draft"),
+      name: z.string().describe("Attachment file name"),
+      contentBytes: z.string().describe("Base64-encoded file content"),
+      contentType: z.string().optional().describe("MIME type (e.g., 'application/pdf', 'image/png'). Auto-detected if omitted."),
+      isInline: z.boolean().optional().describe("Whether the attachment is inline (default: false)")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: false
+      }
+    },
+    handleUploadAttachment
+  );
+
+  server.tool(
+    "delete-attachment",
+    "Deletes an attachment from an email or draft",
+    {
+      id: z.string().describe("ID of the email or draft"),
+      attachmentId: z.string().describe("ID of the attachment (from list-attachments)")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: false
+      }
+    },
+    handleDeleteAttachment
+  );
+
   // Write tools - mutating operations
   server.tool(
     "send-email",
@@ -178,6 +222,43 @@ function registerEmailTools(server) {
       }
     },
     handleDeleteEmail
+  );
+
+  server.tool(
+    "flag-email",
+    "Flags, completes, or clears the flag on an email for follow-up",
+    {
+      id: z.string().describe("ID of the email to flag"),
+      flagStatus: z.enum(["flagged", "completed", "cleared"]).describe("Flag status: 'flagged' (for follow-up), 'completed' (done), 'cleared' (remove flag)"),
+      dueDateTime: z.string().optional().describe("Due date/time for follow-up in ISO 8601 format (UTC). Only used when flagStatus is 'flagged'.")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false
+      }
+    },
+    handleFlagEmail
+  );
+
+  server.tool(
+    "categorize-email",
+    "Adds or removes categories from an email",
+    {
+      id: z.string().describe("ID of the email to categorize"),
+      categories: z.string().optional().describe("Comma-separated list of category names. Empty string clears all categories.")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false
+      }
+    },
+    handleCategorizeEmail
   );
 
   server.tool(
@@ -277,4 +358,8 @@ module.exports = {
   handleCreateDraft,
   handleUpdateDraft,
   handleSendDraft,
+  handleFlagEmail,
+  handleCategorizeEmail,
+  handleUploadAttachment,
+  handleDeleteAttachment,
 };

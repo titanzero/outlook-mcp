@@ -5,6 +5,7 @@ const handleListFolders = require('./list');
 const handleCreateFolder = require('./create');
 const handleMoveEmails = require('./move');
 const handleRenameFolder = require('./rename');
+const handleDeleteFolder = require('./delete');
 const { z } = require('zod');
 
 /**
@@ -82,6 +83,23 @@ function registerFolderTools(server) {
     },
     handleRenameFolder
   );
+
+  server.tool(
+    "delete-folder",
+    "Deletes a mail folder. Cannot delete well-known folders (Inbox, Drafts, Sent Items, etc.) or non-empty folders.",
+    {
+      name: z.string().describe("Name of the folder to delete")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: false
+      }
+    },
+    handleDeleteFolder
+  );
 }
 
 module.exports = {
@@ -89,5 +107,6 @@ module.exports = {
   handleListFolders,
   handleCreateFolder,
   handleMoveEmails,
-  handleRenameFolder
+  handleRenameFolder,
+  handleDeleteFolder
 };

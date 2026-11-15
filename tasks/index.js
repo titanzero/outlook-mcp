@@ -86,6 +86,8 @@ async function handleCreateTask(args) {
   }
 }
 
+const handleUpdateTask = require('./update');
+
 async function handleCompleteTask(args) {
   const { listId, taskId } = args;
 
@@ -177,6 +179,29 @@ function registerTasksTools(server) {
   );
 
   server.tool(
+    "update-task",
+    "Updates an existing task in a To Do list. Can modify title, due date, importance, note, or status.",
+    {
+      listId: z.string().describe("ID of the task list (from list-task-lists)"),
+      taskId: z.string().describe("ID of the task to update (from list-tasks)"),
+      title: z.string().optional().describe("New task title"),
+      dueDateTime: z.string().optional().describe("New due date/time in ISO 8601 format (UTC). Set to empty string to clear."),
+      importance: z.enum(["low", "normal", "high"]).optional().describe("New task importance"),
+      note: z.string().optional().describe("New note/body for the task. Set to empty string to clear."),
+      status: z.enum(["notStarted", "inProgress", "completed", "waitingOnOthers", "deferred"]).optional().describe("New task status")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false
+      }
+    },
+    handleUpdateTask
+  );
+
+  server.tool(
     "complete-task",
     "Marks a task as completed",
     {
@@ -218,6 +243,7 @@ module.exports = {
   handleListTaskLists,
   handleListTasks,
   handleCreateTask,
+  handleUpdateTask,
   handleCompleteTask,
   handleDeleteTask
 };

@@ -8,6 +8,8 @@ const handleUpdateEvent = require('./update');
 const handleTentativelyAcceptEvent = require('./tentative-accept');
 const handleListCalendars = require('./list-calendars');
 const handleGetFreeBusy = require('./free-busy');
+const handleCreateCalendar = require('./create-calendar');
+const handleDeleteCalendar = require('./delete-calendar');
 const { z } = require('zod');
 
 /**
@@ -60,6 +62,43 @@ function registerCalendarTools(server) {
       }
     },
     handleGetFreeBusy
+  );
+
+  // Calendar management tools
+  server.tool(
+    "create-calendar",
+    "Creates a new calendar",
+    {
+      name: z.string().describe("Name of the calendar to create"),
+      color: z.string().optional().describe("Calendar color theme (e.g., 'auto', 'lightBlue', 'lightGreen', 'lightOrange', 'lightGray', 'lightYellow', 'lightTeal', 'lightPink', 'lightBrown', 'lightRed', 'maxColor')"),
+      isDefault: z.boolean().optional().describe("Whether to set this as the default calendar")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: false
+      }
+    },
+    handleCreateCalendar
+  );
+
+  server.tool(
+    "delete-calendar",
+    "Deletes a calendar. Cannot delete the default calendar.",
+    {
+      name: z.string().describe("Name of the calendar to delete")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: false
+      }
+    },
+    handleDeleteCalendar
   );
 
   // Write tools
@@ -210,4 +249,6 @@ module.exports = {
   handleDeleteEvent,
   handleListCalendars,
   handleGetFreeBusy,
+  handleCreateCalendar,
+  handleDeleteCalendar,
 };
