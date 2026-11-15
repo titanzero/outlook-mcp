@@ -11,6 +11,8 @@ const { registerRulesTools, registerRulesResources } = require('./rules');
 const { registerContactsTools, registerContactsResources } = require('./contacts');
 const { registerMailboxTools, registerMailboxResources } = require('./mailbox');
 const { registerTasksTools, registerTasksResources } = require('./tasks');
+const { registerPrompts } = require('./prompts');
+const { registerCompletionCallbacks } = require('./completion');
 
 console.error(`STARTING ${config.SERVER_NAME.toUpperCase()} MCP SERVER`);
 
@@ -20,7 +22,8 @@ const server = new McpServer(
     capabilities: { 
       tools: { listChanged: true },
       resources: { listChanged: true },
-      prompts: { listChanged: true }
+      prompts: { listChanged: true },
+      completions: {}
     },
     instructions:
       "Outlook data in tool responses is provided in TOON (Token-Oriented Object Notation) format, " +
@@ -48,6 +51,10 @@ registerTasksResources(server);
 registerMailboxResources(server);
 registerEmailResources(server);
 registerRulesResources(server);
+
+// Register prompts and completions
+registerPrompts(server);
+registerCompletionCallbacks(server);
 
 process.on('SIGTERM', () => {
   console.error('SIGTERM received, shutting down');

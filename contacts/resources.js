@@ -4,16 +4,27 @@
  */
 const { getGraphClient, graphGetPaginated } = require('../utils/graph-client');
 const { isAuthError } = require('../utils/response-helpers');
+const { ResourceTemplate } = require("@modelcontextprotocol/sdk/server/mcp.js");
+const { getContactCompletions } = require('../completion');
 
 /**
  * Register contacts resources with the MCP server
  * @param {McpServer} server - The MCP server instance
  */
 function registerContactsResources(server) {
-  // Resource template for individual contact by ID
+  // Resource template for individual contact by ID with completion
+  const contactTemplate = new ResourceTemplate(
+    "outlook://contacts/{contactId}",
+    {
+      complete: {
+        contactId: getContactCompletions
+      }
+    }
+  );
+
   server.resource(
     "outlook-contact",
-    "outlook://contacts/{contactId}",
+    contactTemplate,
     {
       title: "Contact",
       description: "Access a contact by ID"

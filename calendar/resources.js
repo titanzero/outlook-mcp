@@ -4,6 +4,8 @@
  */
 const { getGraphClient, graphGetPaginated } = require('../utils/graph-client');
 const { isAuthError } = require('../utils/response-helpers');
+const { ResourceTemplate } = require("@modelcontextprotocol/sdk/server/mcp.js");
+const { getCalendarCompletions, getEventCompletions } = require('../completion');
 
 /**
  * Register calendar resources with the MCP server
@@ -59,10 +61,19 @@ function registerCalendarResources(server) {
     }
   );
 
-  // Resource for individual calendar
+  // Resource for individual calendar with completion
+  const calendarTemplate = new ResourceTemplate(
+    "outlook://calendars/{calendarId}",
+    {
+      complete: {
+        calendarId: getCalendarCompletions
+      }
+    }
+  );
+
   server.resource(
     "outlook-calendar",
-    "outlook://calendars/{calendarId}",
+    calendarTemplate,
     {
       title: "Calendar",
       description: "Access a specific calendar with its events"
@@ -194,10 +205,19 @@ function registerCalendarResources(server) {
     }
   );
 
-  // Resource for individual event
+  // Resource for individual event with completion
+  const eventTemplate = new ResourceTemplate(
+    "outlook://events/{eventId}",
+    {
+      complete: {
+        eventId: getEventCompletions
+      }
+    }
+  );
+
   server.resource(
     "outlook-event",
-    "outlook://events/{eventId}",
+    eventTemplate,
     {
       title: "Event",
       description: "Access a specific event by ID"
