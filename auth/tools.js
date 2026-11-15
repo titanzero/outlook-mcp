@@ -4,6 +4,7 @@
 const config = require('../config');
 const tokenManager = require('./token-manager');
 const { makeErrorResponse, makeResponse } = require('../utils/response-helpers');
+const { z } = require('zod');
 
 /**
  * About tool handler
@@ -30,7 +31,7 @@ async function handleAuthenticate(args) {
 
     if (!config.AUTH_CONFIG.clientId) {
       return makeErrorResponse(
-        'Authentication configuration is missing. Set OUTLOOK_CLIENT_ID and OUTLOOK_CLIENT_SECRET, then restart Claude and try again.'
+        'Authentication configuration is missing. Set OUTLOOK_CLIENT_ID and OUTLOOK_CLIENT_SECRET, then restart and try again.'
       );
     }
 
@@ -67,47 +68,60 @@ async function handleCheckAuthStatus() {
   return makeResponse('Authenticated and ready');
 }
 
-// Tool definitions
-const authTools = [
-  {
-    name: "about",
-    description: "Returns information about this Outlook Assistant server",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: []
+/**
+ * Register authentication tools with the MCP server
+ * @param {McpServer} server - The MCP server instance
+ */
+function registerAuthTools(server) {
+  // About tool - read-only, no side effects
+  server.tool(
+    "about",
+    "Returns information about this Outlook Assistant server",
+    {},
+    { 
+      annotations: { 
+        readOnlyHint: true,
+        openWorldHint: false
+      }
     },
-    handler: handleAbout
-  },
-  {
-    name: "authenticate",
-    description: "Authenticate with Microsoft Graph API to access Outlook data",
-    inputSchema: {
-      type: "object",
-      properties: {
-        force: {
-          type: "boolean",
-          description: "Force re-authentication even if already authenticated"
-        }
-      },
-      required: []
+    handleAbout
+  );
+
+  // Authenticate tool - may trigger OAuth flow
+  server.tool(
+    "authenticate",
+    "Authenticate with Microsoft Graph API to access Outlook data",
+    {
+      force: z.boolean().optional().describe("Force re-authentication even if already authenticated")
     },
-    handler: handleAuthenticate
-  },
-  {
-    name: "check-auth-status",
-    description: "Check the current authentication status with Microsoft Graph API",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: []
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true
+      }
     },
-    handler: handleCheckAuthStatus
-  }
-];
+    handleAuthenticate
+  );
+
+  // Check auth status - read-only
+  server.tool(
+    "check-auth-status",
+    "Check the current authentication status with Microsoft Graph API",
+    {},
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false
+      }
+    },
+    handleCheckAuthStatus
+  );
+}
 
 module.exports = {
-  authTools,
+  registerAuthTools,
   handleAbout,
   handleAuthenticate,
   handleCheckAuthStatus

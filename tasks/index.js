@@ -1,6 +1,8 @@
 const { getGraphClient } = require('../utils/graph-client');
 const { formatResponse } = require('../utils/response-formatter');
 const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
+const { registerTasksResources } = require('./resources');
+const { z } = require('zod');
 
 async function handleListTaskLists(args) {
   try {
@@ -85,6 +87,8 @@ async function handleCreateTask(args) {
   }
 }
 
+const handleUpdateTask = require('./update');
+
 async function handleCompleteTask(args) {
   const { listId, taskId } = args;
 
@@ -120,68 +124,128 @@ async function handleDeleteTask(args) {
   }
 }
 
-const tasksTools = [
-  {
-    name: "list-task-lists",
-    description: "Lists all Microsoft To Do task lists",
-    inputSchema: { type: "object", properties: {}, required: [] },
-    handler: handleListTaskLists
-  },
-  {
-    name: "list-tasks",
-    description: "Lists tasks in a specific To Do list. By default excludes completed tasks.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        listId: { type: "string", description: "ID of the task list (from list-task-lists)" },
-        includeCompleted: { type: "boolean", description: "Include completed tasks (default: false)" }
-      },
-      required: ["listId"]
+/**
+ * Register tasks tools with the MCP server
+ * @param {McpServer} server - The MCP server instance
+ */
+function registerTasksTools(server) {
+  server.tool(
+    "list-task-lists",
+    "Lists all Microsoft To Do task lists",
+    {},
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false
+      }
     },
-    handler: handleListTasks
-  },
-  {
-    name: "create-task",
-    description: "Creates a new task in a To Do list",
-    inputSchema: {
-      type: "object",
-      properties: {
-        listId: { type: "string", description: "ID of the task list (from list-task-lists)" },
-        title: { type: "string", description: "Task title" },
-        dueDateTime: { type: "string", description: "Due date/time in ISO 8601 format (UTC)" },
-        importance: { type: "string", description: "Task importance", enum: ["low", "normal", "high"] },
-        note: { type: "string", description: "Optional note/body for the task" }
-      },
-      required: ["listId", "title"]
-    },
-    handler: handleCreateTask
-  },
-  {
-    name: "complete-task",
-    description: "Marks a task as completed",
-    inputSchema: {
-      type: "object",
-      properties: {
-        listId: { type: "string", description: "ID of the task list" },
-        taskId: { type: "string", description: "ID of the task to complete (from list-tasks)" }
-      },
-      required: ["listId", "taskId"]
-    },
-    handler: handleCompleteTask
-  },
-  {
-    name: "delete-task",
-    description: "Deletes a task from a To Do list",
-    inputSchema: {
-      type: "object",
-      properties: {
-        listId: { type: "string", description: "ID of the task list" },
-        taskId: { type: "string", description: "ID of the task to delete (from list-tasks)" }
-      },
-      required: ["listId", "taskId"]
-    },
-    handler: handleDeleteTask
-  }
-];
+    handleListTaskLists
+  );
 
-module.exports = { tasksTools };
+  server.tool(
+    "list-tasks",
+    "Lists tasks in a specific To Do list. By default excludes completed tasks.",
+    {
+      listId: z.string().describe("ID of the task list (from list-task-lists)"),
+      includeCompleted: z.boolean().optional().describe("Include completed tasks (default: false)")
+    },
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false
+      }
+    },
+    handleListTasks
+  );
+
+  server.tool(
+    "create-task",
+    "Creates a new task in a To Do list",
+    {
+      listId: z.string().describe("ID of the task list (from list-task-lists)"),
+      title: z.string().describe("Task title"),
+      dueDateTime: z.string().optional().describe("Due date/time in ISO 8601 format (UTC)"),
+      importance: z.enum(["low", "normal", "high"]).optional().describe("Task importance"),
+      note: z.string().optional().describe("Optional note/body for the task")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: false
+      }
+    },
+    handleCreateTask
+  );
+
+  server.tool(
+    "update-task",
+    "Updates an existing task in a To Do list. Can modify title, due date, importance, note, or status.",
+    {
+      listId: z.string().describe("ID of the task list (from list-task-lists)"),
+      taskId: z.string().describe("ID of the task to update (from list-tasks)"),
+      title: z.string().optional().describe("New task title"),
+      dueDateTime: z.string().optional().describe("New due date/time in ISO 8601 format (UTC). Set to empty string to clear."),
+      importance: z.enum(["low", "normal", "high"]).optional().describe("New task importance"),
+      note: z.string().optional().describe("New note/body for the task. Set to empty string to clear."),
+      status: z.enum(["notStarted", "inProgress", "completed", "waitingOnOthers", "deferred"]).optional().describe("New task status")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false
+      }
+    },
+    handleUpdateTask
+  );
+
+  server.tool(
+    "complete-task",
+    "Marks a task as completed",
+    {
+      listId: z.string().describe("ID of the task list"),
+      taskId: z.string().describe("ID of the task to complete (from list-tasks)")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false
+      }
+    },
+    handleCompleteTask
+  );
+
+  server.tool(
+    "delete-task",
+    "Deletes a task from a To Do list",
+    {
+      listId: z.string().describe("ID of the task list"),
+      taskId: z.string().describe("ID of the task to delete (from list-tasks)")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: false
+      }
+    },
+    handleDeleteTask
+  );
+}
+
+module.exports = {
+  registerTasksTools,
+  registerTasksResources,
+  handleListTaskLists,
+  handleListTasks,
+  handleCreateTask,
+  handleUpdateTask,
+  handleCompleteTask,
+  handleDeleteTask
+};
