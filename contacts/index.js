@@ -3,6 +3,7 @@ const handleCreateContact = require('./create');
 const handleCreateContactFull = require('./create-full');
 const handleUpdateContact = require('./update');
 const handleDeleteContact = require('./delete');
+const { registerContactsResources } = require('./resources');
 const { z } = require('zod');
 
 /**
@@ -135,6 +136,7 @@ function registerContactsTools(server) {
 
 module.exports = {
   registerContactsTools,
+  registerContactsResources,
   handleListContacts,
   handleCreateContact,
   handleCreateContactFull,

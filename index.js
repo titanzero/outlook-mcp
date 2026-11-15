@@ -4,13 +4,15 @@ const { StdioServerTransport } = require("@modelcontextprotocol/sdk/server/stdio
 const config = require('./config');
 
 const { registerAuthTools } = require('./auth');
-const { registerCalendarTools } = require('./calendar');
-const { registerEmailTools } = require('./email');
-const { registerFolderTools } = require('./folder');
-const { registerRulesTools } = require('./rules');
-const { registerContactsTools } = require('./contacts');
-const { registerMailboxTools } = require('./mailbox');
-const { registerTasksTools } = require('./tasks');
+const { registerCalendarTools, registerCalendarResources } = require('./calendar');
+const { registerEmailTools, registerEmailResources } = require('./email');
+const { registerFolderTools, registerFolderResources } = require('./folder');
+const { registerRulesTools, registerRulesResources } = require('./rules');
+const { registerContactsTools, registerContactsResources } = require('./contacts');
+const { registerMailboxTools, registerMailboxResources } = require('./mailbox');
+const { registerTasksTools, registerTasksResources } = require('./tasks');
+const { registerPrompts } = require('./prompts');
+const { registerCompletionCallbacks } = require('./completion');
 
 console.error(`STARTING ${config.SERVER_NAME.toUpperCase()} MCP SERVER`);
 
@@ -20,7 +22,8 @@ const server = new McpServer(
     capabilities: { 
       tools: { listChanged: true },
       resources: { listChanged: true },
-      prompts: { listChanged: true }
+      prompts: { listChanged: true },
+      completions: {}
     },
     instructions:
       "Outlook data in tool responses is provided in TOON (Token-Oriented Object Notation) format, " +
@@ -39,6 +42,19 @@ registerRulesTools(server);
 registerContactsTools(server);
 registerMailboxTools(server);
 registerTasksTools(server);
+
+// Register all resource modules
+registerFolderResources(server);
+registerContactsResources(server);
+registerCalendarResources(server);
+registerTasksResources(server);
+registerMailboxResources(server);
+registerEmailResources(server);
+registerRulesResources(server);
+
+// Register prompts and completions
+registerPrompts(server);
+registerCompletionCallbacks(server);
 
 process.on('SIGTERM', () => {
   console.error('SIGTERM received, shutting down');

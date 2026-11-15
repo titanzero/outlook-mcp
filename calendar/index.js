@@ -10,6 +10,7 @@ const handleListCalendars = require('./list-calendars');
 const handleGetFreeBusy = require('./free-busy');
 const handleCreateCalendar = require('./create-calendar');
 const handleDeleteCalendar = require('./delete-calendar');
+const { registerCalendarResources } = require('./resources');
 const { z } = require('zod');
 
 /**
@@ -239,6 +240,7 @@ function registerCalendarTools(server) {
 
 module.exports = {
   registerCalendarTools,
+  registerCalendarResources,
   handleListEvents,
   handleAcceptEvent,
   handleDeclineEvent,

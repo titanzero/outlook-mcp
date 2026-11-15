@@ -1,6 +1,7 @@
 const { getGraphClient } = require('../utils/graph-client');
 const { formatResponse } = require('../utils/response-formatter');
 const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
+const { registerTasksResources } = require('./resources');
 const { z } = require('zod');
 
 async function handleListTaskLists(args) {
@@ -240,6 +241,7 @@ function registerTasksTools(server) {
 
 module.exports = {
   registerTasksTools,
+  registerTasksResources,
   handleListTaskLists,
   handleListTasks,
   handleCreateTask,
