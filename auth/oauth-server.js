@@ -6,11 +6,11 @@ const config = require('../config');
 // HTML templates
 function escapeHtml(unsafe) {
   return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 const templates = {
@@ -31,7 +31,7 @@ const templates = {
         <p>You can close this window.</p>
       </body>
     </html>`,
-  tokenExchangeError: (error) => `
+  tokenExchangeError: error => `
     <html>
       <body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px;">
         <h1 style="color: #e74c3c;">❌ Token Exchange Failed</h1>
@@ -40,13 +40,13 @@ const templates = {
         <p>You can close this window and try again.</p>
       </body>
     </html>`,
-  tokenStatus: (status) => `
+  tokenStatus: status => `
     <html>
       <body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px;">
         <h1>🔐 Token Status</h1>
         <p>${escapeHtml(status)}</p>
       </body>
-    </html>`
+    </html>`,
 };
 
 function createAuthConfig() {
@@ -59,7 +59,7 @@ function createAuthConfig() {
     redirectUri: process.env.OUTLOOK_REDIRECT_URI || config.AUTH_CONFIG.redirectUri,
     scopes: envScopes || [...config.AUTH_CONFIG.scopes],
     tokenEndpoint: config.TOKEN_ENDPOINT,
-    authEndpoint: config.AUTH_ENDPOINT
+    authEndpoint: config.AUTH_ENDPOINT,
   };
 }
 
@@ -70,18 +70,21 @@ function setupOAuthRoutes(app, authConfig) {
 
   app.get('/auth', (req, res) => {
     if (!authConfig.clientId) {
-      return res.status(500).send(templates.authError('Configuration Error', 'Client ID is not configured.'));
+      return res
+        .status(500)
+        .send(templates.authError('Configuration Error', 'Client ID is not configured.'));
     }
     const state = crypto.randomBytes(16).toString('hex');
 
-    const authorizationUrl = `${authConfig.authEndpoint}?` +
+    const authorizationUrl =
+      `${authConfig.authEndpoint}?` +
       querystring.stringify({
         client_id: authConfig.clientId,
         response_type: 'code',
         redirect_uri: authConfig.redirectUri,
         scope: authConfig.scopes.join(' '),
         response_mode: 'query',
-        state: state
+        state: state,
       });
     res.redirect(authorizationUrl);
   });
@@ -90,8 +93,17 @@ function setupOAuthRoutes(app, authConfig) {
     const { code, error, error_description, state } = req.query;
 
     if (!state) {
-        console.error("OAuth callback received without a 'state' parameter. Rejecting request to prevent potential CSRF attack.");
-        return res.status(400).send(templates.authError('Missing State Parameter', 'The state parameter was missing from the OAuth callback. This is a security risk. Please try authenticating again.'));
+      console.error(
+        "OAuth callback received without a 'state' parameter. Rejecting request to prevent potential CSRF attack."
+      );
+      return res
+        .status(400)
+        .send(
+          templates.authError(
+            'Missing State Parameter',
+            'The state parameter was missing from the OAuth callback. This is a security risk. Please try authenticating again.'
+          )
+        );
     }
 
     if (error) {
@@ -99,7 +111,14 @@ function setupOAuthRoutes(app, authConfig) {
     }
 
     if (!code) {
-      return res.status(400).send(templates.authError('Missing Authorization Code', 'No authorization code was provided in the callback.'));
+      return res
+        .status(400)
+        .send(
+          templates.authError(
+            'Missing Authorization Code',
+            'No authorization code was provided in the callback.'
+          )
+        );
     }
 
     try {
@@ -116,7 +135,9 @@ function setupOAuthRoutes(app, authConfig) {
       const token = await tokenManager.getAccessToken();
       if (token) {
         const expiryDate = new Date(tokenManager.getExpiryTime());
-        res.send(templates.tokenStatus(`Access token is valid. Expires at: ${expiryDate.toLocaleString()}`));
+        res.send(
+          templates.tokenStatus(`Access token is valid. Expires at: ${expiryDate.toLocaleString()}`)
+        );
       } else {
         res.send(templates.tokenStatus('No valid access token found. Please authenticate.'));
       }

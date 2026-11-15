@@ -5,16 +5,26 @@ const config = require('../config');
 async function handleUpdateEvent(args) {
   const { eventId, subject, start, end, location, body, attendees, isAllDay } = args;
 
-  if (!eventId) return makeErrorResponse('Event ID is required.');
+  if (!eventId) {
+    return makeErrorResponse('Event ID is required.');
+  }
 
   try {
     const client = await getGraphClient();
 
     const patch = {};
-    if (subject !== undefined) patch.subject = subject;
-    if (location !== undefined) patch.location = { displayName: location };
-    if (body !== undefined) patch.body = { contentType: 'text', content: body };
-    if (isAllDay !== undefined) patch.isAllDay = isAllDay;
+    if (subject !== undefined) {
+      patch.subject = subject;
+    }
+    if (location !== undefined) {
+      patch.location = { displayName: location };
+    }
+    if (body !== undefined) {
+      patch.body = { contentType: 'text', content: body };
+    }
+    if (isAllDay !== undefined) {
+      patch.isAllDay = isAllDay;
+    }
 
     if (start !== undefined) {
       patch.start = { dateTime: start, timeZone: config.DEFAULT_TIMEZONE };
@@ -31,9 +41,11 @@ async function handleUpdateEvent(args) {
 
     await client.api(`me/events/${eventId}`).patch(patch);
 
-    return makeResponse(`Event updated successfully.`);
+    return makeResponse('Event updated successfully.');
   } catch (error) {
-    if (isAuthError(error)) return makeErrorResponse(error.message);
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
+    }
     return makeErrorResponse(`Error updating event: ${error.message}`);
   }
 }

@@ -20,7 +20,9 @@ async function getFolderCompletions(value) {
       .slice(0, 20)
       .map(s => ({ value: s, label: s }));
   } catch (error) {
-    if (isAuthError(error)) return [];
+    if (isAuthError(error)) {
+      return [];
+    }
     console.error('Folder completion error:', error);
     return [];
   }
@@ -36,14 +38,16 @@ async function getCalendarCompletions(value) {
     const client = await getGraphClient();
     const response = await client.api('me/calendars').select('id,name').get();
     const calendars = response.value || [];
-    
+
     return calendars
       .map(c => c.name)
       .filter(name => name.toLowerCase().includes(value.toLowerCase()))
       .slice(0, 20)
       .map(name => ({ value: name, label: name }));
   } catch (error) {
-    if (isAuthError(error)) return [];
+    if (isAuthError(error)) {
+      return [];
+    }
     console.error('Calendar completion error:', error);
     return [];
   }
@@ -57,14 +61,15 @@ async function getCalendarCompletions(value) {
 async function getContactCompletions(value) {
   try {
     const client = await getGraphClient();
-    const response = await client.api('me/contacts')
+    const response = await client
+      .api('me/contacts')
       .select('id,displayName,emailAddresses')
       .top(50)
       .get();
-    
+
     const contacts = response.value || [];
     const suggestions = [];
-    
+
     contacts.forEach(c => {
       c.emailAddresses?.forEach(e => {
         if (e.address.toLowerCase().includes(value.toLowerCase())) {
@@ -75,10 +80,12 @@ async function getContactCompletions(value) {
         suggestions.push({ value: c.displayName, label: c.displayName });
       }
     });
-    
+
     return suggestions.slice(0, 20);
   } catch (error) {
-    if (isAuthError(error)) return [];
+    if (isAuthError(error)) {
+      return [];
+    }
     console.error('Contact completion error:', error);
     return [];
   }
@@ -94,14 +101,16 @@ async function getTaskListCompletions(value) {
     const client = await getGraphClient();
     const response = await client.api('me/todo/lists').select('id,displayName').get();
     const lists = response.value || [];
-    
+
     return lists
       .map(l => l.displayName)
       .filter(name => name.toLowerCase().includes(value.toLowerCase()))
       .slice(0, 20)
       .map(name => ({ value: name, label: name }));
   } catch (error) {
-    if (isAuthError(error)) return [];
+    if (isAuthError(error)) {
+      return [];
+    }
     console.error('Task list completion error:', error);
     return [];
   }
@@ -114,12 +123,29 @@ async function getTaskListCompletions(value) {
  */
 async function getCategoryCompletions(value) {
   const commonCategories = [
-    'Red Category', 'Orange Category', 'Yellow Category', 'Green Category',
-    'Blue Category', 'Purple Category', 'Pink Category', 'Grey Category',
-    'Important', 'Urgent', 'Follow Up', 'Waiting', 'Reference', 'Personal',
-    'Work', 'Project', 'Meeting', 'Travel', 'Finance', 'Legal', 'HR'
+    'Red Category',
+    'Orange Category',
+    'Yellow Category',
+    'Green Category',
+    'Blue Category',
+    'Purple Category',
+    'Pink Category',
+    'Grey Category',
+    'Important',
+    'Urgent',
+    'Follow Up',
+    'Waiting',
+    'Reference',
+    'Personal',
+    'Work',
+    'Project',
+    'Meeting',
+    'Travel',
+    'Finance',
+    'Legal',
+    'HR',
   ];
-  
+
   return commonCategories
     .filter(cat => cat.toLowerCase().includes(value.toLowerCase()))
     .slice(0, 20)
@@ -134,18 +160,21 @@ async function getCategoryCompletions(value) {
 async function getRuleCompletions(value) {
   try {
     const client = await getGraphClient();
-    const response = await client.api('me/mailFolders/inbox/messageRules')
+    const response = await client
+      .api('me/mailFolders/inbox/messageRules')
       .select('id,displayName')
       .get();
     const rules = response.value || [];
-    
+
     return rules
       .map(r => r.displayName)
       .filter(name => name.toLowerCase().includes(value.toLowerCase()))
       .slice(0, 20)
       .map(name => ({ value: name, label: name }));
   } catch (error) {
-    if (isAuthError(error)) return [];
+    if (isAuthError(error)) {
+      return [];
+    }
     console.error('Rule completion error:', error);
     return [];
   }
@@ -158,9 +187,7 @@ async function getRuleCompletions(value) {
  */
 async function getImportanceCompletions(value) {
   const levels = ['low', 'normal', 'high'];
-  return levels
-    .filter(l => l.startsWith(value.toLowerCase()))
-    .map(l => ({ value: l, label: l }));
+  return levels.filter(l => l.startsWith(value.toLowerCase())).map(l => ({ value: l, label: l }));
 }
 
 /**
@@ -169,7 +196,16 @@ async function getImportanceCompletions(value) {
  * @returns {Promise<Array<{value: string, label: string}>>}
  */
 async function getEmailFolderCompletions(value) {
-  const wellKnown = ['inbox', 'sent', 'drafts', 'deleted', 'junk', 'archive', 'outbox', 'conversationhistory'];
+  const wellKnown = [
+    'inbox',
+    'sent',
+    'drafts',
+    'deleted',
+    'junk',
+    'archive',
+    'outbox',
+    'conversationhistory',
+  ];
   return wellKnown
     .filter(f => f.startsWith(value.toLowerCase()))
     .map(f => ({ value: f, label: f }));
@@ -180,7 +216,7 @@ async function getEmailFolderCompletions(value) {
  * This is called from each resource module to add completions
  * @param {McpServer} server - The MCP server instance
  */
-function registerCompletionCallbacks(server) {
+function registerCompletionCallbacks(_server) {
   // The completions are registered on resource templates via the ResourceTemplate class
   // when using server.resource() with a template that has completeCallback
   // This function is a placeholder for future use if needed
@@ -195,18 +231,21 @@ function registerCompletionCallbacks(server) {
 async function getEventCompletions(value) {
   try {
     const client = await getGraphClient();
-    const response = await client.api('me/events')
+    const response = await client
+      .api('me/events')
       .select('id,subject')
       .filter(`startswith(subject,'${value.replace(/'/g, "''")}')`)
       .top(20)
       .get();
     const events = response.value || [];
-    
+
     return events
       .map(e => ({ value: e.id, label: `${e.subject} [${e.id.substring(0, 8)}...]` }))
       .slice(0, 20);
   } catch (error) {
-    if (isAuthError(error)) return [];
+    if (isAuthError(error)) {
+      return [];
+    }
     console.error('Event completion error:', error);
     return [];
   }
@@ -222,5 +261,5 @@ module.exports = {
   getImportanceCompletions,
   getEmailFolderCompletions,
   getEventCompletions,
-  registerCompletionCallbacks
+  registerCompletionCallbacks,
 };

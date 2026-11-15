@@ -4,14 +4,18 @@ const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/respo
 async function handleDeleteContact(args) {
   const { id } = args;
 
-  if (!id) return makeErrorResponse('Contact ID is required.');
+  if (!id) {
+    return makeErrorResponse('Contact ID is required.');
+  }
 
   try {
     const client = await getGraphClient();
     await client.api(`me/contacts/${id}`).delete();
     return makeResponse('Contact deleted successfully.');
   } catch (error) {
-    if (isAuthError(error)) return makeErrorResponse(error.message);
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
+    }
     return makeErrorResponse(`Error deleting contact: ${error.message}`);
   }
 }

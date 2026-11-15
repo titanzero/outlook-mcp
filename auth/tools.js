@@ -51,20 +51,20 @@ async function handleAuthenticate(args) {
  */
 async function handleCheckAuthStatus() {
   console.error('[CHECK-AUTH-STATUS] Starting authentication status check');
-  
+
   const tokens = tokenManager.loadTokenCacheSync();
-  
+
   console.error(`[CHECK-AUTH-STATUS] Tokens loaded: ${tokens ? 'YES' : 'NO'}`);
-  
+
   if (!tokens || !tokens.access_token) {
     console.error('[CHECK-AUTH-STATUS] No valid access token found');
     return makeResponse('Not authenticated');
   }
-  
+
   console.error('[CHECK-AUTH-STATUS] Access token present');
   console.error(`[CHECK-AUTH-STATUS] Token expires at: ${tokens.expires_at}`);
   console.error(`[CHECK-AUTH-STATUS] Current time: ${Date.now()}`);
-  
+
   return makeResponse('Authenticated and ready');
 }
 
@@ -75,46 +75,49 @@ async function handleCheckAuthStatus() {
 function registerAuthTools(server) {
   // About tool - read-only, no side effects
   server.tool(
-    "about",
-    "Returns information about this Outlook Assistant server",
+    'about',
+    'Returns information about this Outlook Assistant server',
     {},
-    { 
-      annotations: { 
+    {
+      annotations: {
         readOnlyHint: true,
-        openWorldHint: false
-      }
+        openWorldHint: false,
+      },
     },
     handleAbout
   );
 
   // Authenticate tool - may trigger OAuth flow
   server.tool(
-    "authenticate",
-    "Authenticate with Microsoft Graph API to access Outlook data",
+    'authenticate',
+    'Authenticate with Microsoft Graph API to access Outlook data',
     {
-      force: z.boolean().optional().describe("Force re-authentication even if already authenticated")
+      force: z
+        .boolean()
+        .optional()
+        .describe('Force re-authentication even if already authenticated'),
     },
     {
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
         idempotentHint: false,
-        openWorldHint: true
-      }
+        openWorldHint: true,
+      },
     },
     handleAuthenticate
   );
 
   // Check auth status - read-only
   server.tool(
-    "check-auth-status",
-    "Check the current authentication status with Microsoft Graph API",
+    'check-auth-status',
+    'Check the current authentication status with Microsoft Graph API',
     {},
     {
       annotations: {
         readOnlyHint: true,
-        openWorldHint: false
-      }
+        openWorldHint: false,
+      },
     },
     handleCheckAuthStatus
   );
@@ -124,5 +127,5 @@ module.exports = {
   registerAuthTools,
   handleAbout,
   handleAuthenticate,
-  handleCheckAuthStatus
+  handleCheckAuthStatus,
 };

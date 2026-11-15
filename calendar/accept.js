@@ -22,7 +22,7 @@ async function handleAcceptEvent(args) {
 
     // Request body
     const body = {
-      comment: comment || "Accepted via API"
+      comment: comment || 'Accepted via API',
     };
 
     // Make API call

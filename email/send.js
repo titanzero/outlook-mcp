@@ -12,69 +12,73 @@ const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/respo
  */
 async function handleSendEmail(args) {
   const { to, cc, bcc, subject, body, importance = 'normal', saveToSentItems = true } = args;
-  
+
   // Validate required parameters
   if (!to) {
     return makeErrorResponse('Recipient (to) is required.');
   }
-  
+
   if (!subject) {
     return makeErrorResponse('Subject is required.');
   }
-  
+
   if (!body) {
     return makeErrorResponse('Body content is required.');
   }
-  
+
   try {
     // Format recipients
     const toRecipients = to.split(',').map(email => {
       email = email.trim();
       return {
         emailAddress: {
-          address: email
-        }
+          address: email,
+        },
       };
     });
-    
-    const ccRecipients = cc ? cc.split(',').map(email => {
-      email = email.trim();
-      return {
-        emailAddress: {
-          address: email
-        }
-      };
-    }) : [];
-    
-    const bccRecipients = bcc ? bcc.split(',').map(email => {
-      email = email.trim();
-      return {
-        emailAddress: {
-          address: email
-        }
-      };
-    }) : [];
-    
+
+    const ccRecipients = cc
+      ? cc.split(',').map(email => {
+        email = email.trim();
+        return {
+          emailAddress: {
+            address: email,
+          },
+        };
+      })
+      : [];
+
+    const bccRecipients = bcc
+      ? bcc.split(',').map(email => {
+        email = email.trim();
+        return {
+          emailAddress: {
+            address: email,
+          },
+        };
+      })
+      : [];
+
     // Prepare email object
     const emailObject = {
       message: {
         subject,
         body: {
           contentType: body.includes('<html') ? 'html' : 'text',
-          content: body
+          content: body,
         },
         toRecipients,
         ccRecipients: ccRecipients.length > 0 ? ccRecipients : undefined,
         bccRecipients: bccRecipients.length > 0 ? bccRecipients : undefined,
-        importance
+        importance,
       },
-      saveToSentItems
+      saveToSentItems,
     };
-    
+
     // Make API call to send email
     const client = await getGraphClient();
     await client.api('me/sendMail').post(emailObject);
-    
+
     return makeResponse(
       `Email sent successfully!\n\nSubject: ${subject}\nRecipients: ${toRecipients.length}${ccRecipients.length > 0 ? ` + ${ccRecipients.length} CC` : ''}${bccRecipients.length > 0 ? ` + ${bccRecipients.length} BCC` : ''}\nMessage Length: ${body.length} characters`
     );
@@ -82,7 +86,7 @@ async function handleSendEmail(args) {
     if (isAuthError(error)) {
       return makeErrorResponse(error.message);
     }
-    
+
     return makeErrorResponse(`Error sending email: ${error.message}`);
   }
 }

@@ -1,6 +1,6 @@
 /**
  * Unified token management for Microsoft Graph API authentication.
- * 
+ *
  * Consolidates the previous token-manager.js and token-storage.js into
  * a single async module with:
  *   - Async file I/O (fs.promises)
@@ -29,7 +29,7 @@ let lastErrorReason = null;
  * Record the last token/auth related error in a structured way.
  * This is later used by ensureAuthenticated() and tools to provide
  * more helpful error messages to the user.
- * 
+ *
  * @param {string} code - Short machine-readable error code
  * @param {string} message - Human-readable description
  * @param {object} [extra] - Optional extra diagnostic data
@@ -52,23 +52,31 @@ function getLastErrorReason() {
  * @returns {Promise<object|null>} Parsed tokens or null
  */
 async function loadTokens() {
-  if (cachedTokens) return cachedTokens;
+  if (cachedTokens) {
+    return cachedTokens;
+  }
 
-  if (_loadPromise) return _loadPromise;
+  if (_loadPromise) {
+    return _loadPromise;
+  }
 
   _loadPromise = (async () => {
     const tokenPath = config.AUTH_CONFIG.tokenStorePath;
     try {
       const data = await fs.readFile(tokenPath, 'utf8');
-      
+
       let tokens;
       try {
         tokens = JSON.parse(data);
       } catch (parseError) {
         console.error(`[token-manager] Invalid token JSON at ${tokenPath}: ${parseError.message}`);
-        setLastError('TOKEN_FILE_INVALID_JSON', `Invalid token JSON at ${tokenPath}: ${parseError.message}`, {
-          path: tokenPath,
-        });
+        setLastError(
+          'TOKEN_FILE_INVALID_JSON',
+          `Invalid token JSON at ${tokenPath}: ${parseError.message}`,
+          {
+            path: tokenPath,
+          }
+        );
         return null;
       }
 
@@ -96,19 +104,17 @@ async function loadTokens() {
       // Successful load clears any previous error
       lastErrorReason = null;
       return tokens;
-    } catch (error) {
-      if (error.code === 'ENOENT') {
+    } catch (_error) {
+      if (_error.code === 'ENOENT') {
         console.error(`[token-manager] Token file not found at ${tokenPath}`);
-        setLastError(
-          'TOKEN_FILE_MISSING',
-          `Token file not found at ${tokenPath}`,
-          { path: tokenPath }
-        );
+        setLastError('TOKEN_FILE_MISSING', `Token file not found at ${tokenPath}`, {
+          path: tokenPath,
+        });
       } else {
-        console.error('[token-manager] Error loading tokens:', error.message);
+        console.error('[token-manager] Error loading tokens:', _error.message);
         setLastError(
           'TOKEN_FILE_READ_ERROR',
-          `Error loading token file at ${tokenPath}: ${error.message}`,
+          `Error loading token file at ${tokenPath}: ${_error.message}`,
           { path: tokenPath }
         );
       }
@@ -145,8 +151,10 @@ async function saveTokens(tokens) {
  * @returns {boolean} True if expired or within the refresh buffer
  */
 function isExpired(tokens) {
-  if (!tokens || !tokens.expires_at) return true;
-  return Date.now() >= (tokens.expires_at - config.TOKEN_REFRESH_BUFFER_MS);
+  if (!tokens || !tokens.expires_at) {
+    return true;
+  }
+  return Date.now() >= tokens.expires_at - config.TOKEN_REFRESH_BUFFER_MS;
 }
 
 /**
@@ -164,7 +172,8 @@ async function refreshAccessToken() {
 
   // Ensure client credentials are configured
   if (!config.AUTH_CONFIG.clientId || !config.AUTH_CONFIG.clientSecret) {
-    const message = 'Client ID or Client Secret is not configured. Set OUTLOOK_CLIENT_ID and OUTLOOK_CLIENT_SECRET in the environment.';
+    const message =
+      'Client ID or Client Secret is not configured. Set OUTLOOK_CLIENT_ID and OUTLOOK_CLIENT_SECRET in the environment.';
     console.error(`[token-manager] ${message}`);
     setLastError('CLIENT_CONFIG_MISSING', message);
     throw new Error(message);
@@ -188,7 +197,10 @@ async function refreshAccessToken() {
   if (!refreshToken) {
     // Only record this error if there isn't already a more specific one (e.g. TOKEN_FILE_MISSING)
     if (!lastErrorReason) {
-      setLastError('REFRESH_FAILED_NO_REFRESH_TOKEN', 'No refresh token found. Please re-authenticate.');
+      setLastError(
+        'REFRESH_FAILED_NO_REFRESH_TOKEN',
+        'No refresh token found. Please re-authenticate.'
+      );
     }
     throw new Error('No refresh token available. Please re-authenticate.');
   }
@@ -200,7 +212,7 @@ async function refreshAccessToken() {
     client_secret: config.AUTH_CONFIG.clientSecret,
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
-    scope: config.AUTH_CONFIG.scopes.join(' ')
+    scope: config.AUTH_CONFIG.scopes.join(' '),
   });
 
   _refreshPromise = new Promise((resolve, reject) => {
@@ -213,18 +225,20 @@ async function refreshAccessToken() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Content-Length': Buffer.byteLength(postData)
-      }
+        'Content-Length': Buffer.byteLength(postData),
+      },
     };
 
-    const req = https.request(options, (res) => {
+    const req = https.request(options, res => {
       let data = '';
-      res.on('data', (chunk) => { data += chunk; });
+      res.on('data', chunk => {
+        data += chunk;
+      });
       res.on('end', async () => {
         try {
           if (res.statusCode >= 200 && res.statusCode < 300) {
             const newTokens = JSON.parse(data);
-            newTokens.expires_at = Date.now() + (newTokens.expires_in * 1000);
+            newTokens.expires_at = Date.now() + newTokens.expires_in * 1000;
 
             // Preserve old refresh token if new one not provided
             if (!newTokens.refresh_token && refreshToken) {
@@ -232,7 +246,10 @@ async function refreshAccessToken() {
             }
 
             await saveTokens(newTokens);
-            console.error('[token-manager] Token refresh successful, expires:', new Date(newTokens.expires_at).toISOString());
+            console.error(
+              '[token-manager] Token refresh successful, expires:',
+              new Date(newTokens.expires_at).toISOString()
+            );
             resolve(newTokens);
           } else {
             let parsedBody = null;
@@ -242,22 +259,28 @@ async function refreshAccessToken() {
               // Non-JSON error body; keep as raw text
             }
 
-            const errorDescription =
-              parsedBody?.error_description ||
-              parsedBody?.error ||
-              data;
+            const errorDescription = parsedBody?.error_description || parsedBody?.error || data;
 
-            const code = /invalid_client/i.test(data) || /AADSTS7000215/.test(data)
-              ? 'REFRESH_FAILED_INVALID_CLIENT'
-              : 'REFRESH_FAILED';
+            const code =
+              /invalid_client/i.test(data) || /AADSTS7000215/.test(data)
+                ? 'REFRESH_FAILED_INVALID_CLIENT'
+                : 'REFRESH_FAILED';
 
-            console.error(`[token-manager] Refresh failed (${res.statusCode}): ${errorDescription}`);
-            setLastError(code, `Token refresh failed with status ${res.statusCode}: ${errorDescription}`, {
-              statusCode: res.statusCode,
-              rawBody: data,
-            });
+            console.error(
+              `[token-manager] Refresh failed (${res.statusCode}): ${errorDescription}`
+            );
+            setLastError(
+              code,
+              `Token refresh failed with status ${res.statusCode}: ${errorDescription}`,
+              {
+                statusCode: res.statusCode,
+                rawBody: data,
+              }
+            );
 
-            reject(new Error(`Token refresh failed with status ${res.statusCode}: ${errorDescription}`));
+            reject(
+              new Error(`Token refresh failed with status ${res.statusCode}: ${errorDescription}`)
+            );
           }
         } catch (e) {
           reject(e);
@@ -265,10 +288,10 @@ async function refreshAccessToken() {
       });
     });
 
-    req.on('error', (error) => {
-      console.error('[token-manager] Network error during refresh:', error.message);
-      setLastError('REFRESH_NETWORK_ERROR', `Network error during token refresh: ${error.message}`);
-      reject(error);
+    req.on('error', _error => {
+      console.error('[token-manager] Network error during refresh:', _error.message);
+      setLastError('REFRESH_NETWORK_ERROR', `Network error during token refresh: ${_error.message}`);
+      reject(_error);
     });
 
     req.write(postData);
@@ -305,8 +328,8 @@ async function getAccessToken() {
   try {
     const refreshed = await refreshAccessToken();
     return refreshed.access_token;
-  } catch (error) {
-    console.error('[token-manager] Refresh failed:', error.message);
+  } catch (_error) {
+    console.error('[token-manager] Refresh failed:', _error.message);
     // refreshAccessToken will have already set a detailed lastErrorReason
     return null;
   }
@@ -320,7 +343,8 @@ async function getAccessToken() {
  */
 async function exchangeCodeForTokens(authCode) {
   if (!config.AUTH_CONFIG.clientId || !config.AUTH_CONFIG.clientSecret) {
-    const message = 'Client ID or Client Secret is not configured. Cannot exchange code for tokens.';
+    const message =
+      'Client ID or Client Secret is not configured. Cannot exchange code for tokens.';
     setLastError('CLIENT_CONFIG_MISSING', message);
     throw new Error(message);
   }
@@ -333,7 +357,7 @@ async function exchangeCodeForTokens(authCode) {
     grant_type: 'authorization_code',
     code: authCode,
     redirect_uri: config.AUTH_CONFIG.redirectUri,
-    scope: config.AUTH_CONFIG.scopes.join(' ')
+    scope: config.AUTH_CONFIG.scopes.join(' '),
   });
 
   return new Promise((resolve, reject) => {
@@ -346,13 +370,15 @@ async function exchangeCodeForTokens(authCode) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Content-Length': Buffer.byteLength(postData)
-      }
+        'Content-Length': Buffer.byteLength(postData),
+      },
     };
 
-    const req = https.request(options, (res) => {
+    const req = https.request(options, res => {
       let data = '';
-      res.on('data', (chunk) => { data += chunk; });
+      res.on('data', chunk => {
+        data += chunk;
+      });
       res.on('end', async () => {
         try {
           const responseBody = JSON.parse(data);
@@ -361,9 +387,9 @@ async function exchangeCodeForTokens(authCode) {
               access_token: responseBody.access_token,
               refresh_token: responseBody.refresh_token,
               expires_in: responseBody.expires_in,
-              expires_at: Date.now() + (responseBody.expires_in * 1000),
+              expires_at: Date.now() + responseBody.expires_in * 1000,
               scope: responseBody.scope,
-              token_type: responseBody.token_type
+              token_type: responseBody.token_type,
             };
             await saveTokens(tokens);
             console.error('[token-manager] Tokens exchanged and saved successfully');
@@ -374,9 +400,10 @@ async function exchangeCodeForTokens(authCode) {
               responseBody.error ||
               `Token exchange failed with status ${res.statusCode}`;
 
-            const code = /invalid_client/i.test(errorDescription) || /AADSTS7000215/.test(errorDescription)
-              ? 'CODE_EXCHANGE_INVALID_CLIENT'
-              : 'CODE_EXCHANGE_FAILED';
+            const code =
+              /invalid_client/i.test(errorDescription) || /AADSTS7000215/.test(errorDescription)
+                ? 'CODE_EXCHANGE_INVALID_CLIENT'
+                : 'CODE_EXCHANGE_FAILED';
 
             console.error('[token-manager] Code exchange failed:', responseBody);
             setLastError(code, `Token exchange failed: ${errorDescription}`, {
@@ -392,10 +419,13 @@ async function exchangeCodeForTokens(authCode) {
       });
     });
 
-    req.on('error', (error) => {
-      console.error('[token-manager] Network error during code exchange:', error.message);
-      setLastError('CODE_EXCHANGE_NETWORK_ERROR', `Network error during code exchange: ${error.message}`);
-      reject(error);
+    req.on('error', _error => {
+      console.error('[token-manager] Network error during code exchange:', _error.message);
+      setLastError(
+        'CODE_EXCHANGE_NETWORK_ERROR',
+        `Network error during code exchange: ${_error.message}`
+      );
+      reject(_error);
     });
 
     req.write(postData);
@@ -411,11 +441,11 @@ async function clearTokens() {
   try {
     await fs.unlink(config.AUTH_CONFIG.tokenStorePath);
     console.error('[token-manager] Token file deleted');
-  } catch (error) {
-    if (error.code === 'ENOENT') {
+  } catch (_error) {
+    if (_error.code === 'ENOENT') {
       console.error('[token-manager] Token file not found, nothing to delete');
     } else {
-      console.error('[token-manager] Error deleting token file:', error.message);
+      console.error('[token-manager] Error deleting token file:', _error.message);
     }
   }
 }
@@ -426,13 +456,17 @@ async function clearTokens() {
  * @returns {object|null} Token object or null
  */
 function loadTokenCacheSync() {
-  if (cachedTokens) return cachedTokens;
+  if (cachedTokens) {
+    return cachedTokens;
+  }
 
   const tokenPath = config.AUTH_CONFIG.tokenStorePath;
 
   try {
     if (!fsSync.existsSync(tokenPath)) {
-      setLastError('TOKEN_FILE_MISSING', `Token file not found at ${tokenPath}`, { path: tokenPath });
+      setLastError('TOKEN_FILE_MISSING', `Token file not found at ${tokenPath}`, {
+        path: tokenPath,
+      });
       return null;
     }
 
@@ -443,9 +477,13 @@ function loadTokenCacheSync() {
       tokens = JSON.parse(data);
     } catch (parseError) {
       console.error(`[token-manager] Invalid token JSON at ${tokenPath}: ${parseError.message}`);
-      setLastError('TOKEN_FILE_INVALID_JSON', `Invalid token JSON at ${tokenPath}: ${parseError.message}`, {
-        path: tokenPath,
-      });
+      setLastError(
+        'TOKEN_FILE_INVALID_JSON',
+        `Invalid token JSON at ${tokenPath}: ${parseError.message}`,
+        {
+          path: tokenPath,
+        }
+      );
       return null;
     }
 
@@ -486,5 +524,5 @@ module.exports = {
   loadTokenCacheSync,
   getExpiryTime,
   isExpired,
-  getLastErrorReason
+  getLastErrorReason,
 };

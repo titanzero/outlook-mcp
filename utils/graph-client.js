@@ -1,6 +1,6 @@
 /**
  * Microsoft Graph SDK client wrapper
- * 
+ *
  * Replaces the old custom HTTP client (graph-api.js) with the official
  * @microsoft/microsoft-graph-client SDK.
  */
@@ -29,7 +29,7 @@ class OutlookAuthProvider {
 /**
  * Returns a configured Microsoft Graph SDK client.
  * The client uses our OutlookAuthProvider to handle token acquisition and refresh.
- * 
+ *
  * @returns {Promise<import('@microsoft/microsoft-graph-client').Client>}
  */
 async function getGraphClient() {
@@ -50,7 +50,7 @@ async function getGraphClient() {
 /**
  * Paginated GET helper using the Graph SDK.
  * Follows @odata.nextLink automatically to fetch up to maxCount items.
- * 
+ *
  * @param {import('@microsoft/microsoft-graph-client').Client} client - Graph SDK client
  * @param {string} path - API path (e.g. 'me/messages')
  * @param {object} queryParams - OData query parameters ($top, $select, $filter, etc.)
@@ -67,34 +67,34 @@ async function graphGetPaginated(client, path, queryParams = {}, maxCount = 0) {
   // Apply query parameters
   for (const [key, value] of Object.entries(queryParams)) {
     switch (key) {
-      case '$top':
-        request = request.top(value);
-        break;
-      case '$select':
-        request = request.select(value);
-        break;
-      case '$filter':
-        request = request.filter(value);
-        break;
-      case '$orderby':
-        request = request.orderby(value);
-        break;
-      case '$search':
-        request = request.search(value);
-        break;
-      case '$count':
-        request = request.count(value);
-        break;
-      case '$expand':
-        request = request.expand(value);
-        break;
-      case '$skip':
-        request = request.skip(value);
-        break;
-      default:
-        // For non-standard OData params (e.g. startDateTime, endDateTime)
-        request = request.query({ [key]: value });
-        break;
+    case '$top':
+      request = request.top(value);
+      break;
+    case '$select':
+      request = request.select(value);
+      break;
+    case '$filter':
+      request = request.filter(value);
+      break;
+    case '$orderby':
+      request = request.orderby(value);
+      break;
+    case '$search':
+      request = request.search(value);
+      break;
+    case '$count':
+      request = request.count(value);
+      break;
+    case '$expand':
+      request = request.expand(value);
+      break;
+    case '$skip':
+      request = request.skip(value);
+      break;
+    default:
+      // For non-standard OData params (e.g. startDateTime, endDateTime)
+      request = request.query({ [key]: value });
+      break;
     }
   }
 
@@ -104,7 +104,9 @@ async function graphGetPaginated(client, path, queryParams = {}, maxCount = 0) {
 
     if (response.value && Array.isArray(response.value)) {
       allItems.push(...response.value);
-      console.error(`Pagination: Retrieved ${response.value.length} items, total so far: ${allItems.length}`);
+      console.error(
+        `Pagination: Retrieved ${response.value.length} items, total so far: ${allItems.length}`
+      );
     }
 
     nextLink = response['@odata.nextLink'];
@@ -120,7 +122,9 @@ async function graphGetPaginated(client, path, queryParams = {}, maxCount = 0) {
 
       if (nextResponse.value && Array.isArray(nextResponse.value)) {
         allItems.push(...nextResponse.value);
-        console.error(`Pagination: Retrieved ${nextResponse.value.length} items, total so far: ${allItems.length}`);
+        console.error(
+          `Pagination: Retrieved ${nextResponse.value.length} items, total so far: ${allItems.length}`
+        );
       }
 
       nextLink = nextResponse['@odata.nextLink'];
@@ -133,7 +137,7 @@ async function graphGetPaginated(client, path, queryParams = {}, maxCount = 0) {
 
     return {
       value: finalItems,
-      '@odata.count': finalItems.length
+      '@odata.count': finalItems.length,
     };
   } catch (error) {
     console.error('Error during paginated request:', error);
@@ -153,5 +157,5 @@ module.exports = {
   getGraphClient,
   graphGetPaginated,
   OutlookAuthProvider,
-  resetClient
+  resetClient,
 };

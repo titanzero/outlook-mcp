@@ -4,13 +4,13 @@ const {
   getFolderIdByName,
   resolveNestedFolderPath,
   getAllFolders,
-  invalidateFolderCache
+  invalidateFolderCache,
 } = require('../../email/folder-utils');
 const { getGraphClient } = require('../../utils/graph-client');
 
 jest.mock('../../utils/graph-client');
 jest.mock('../../auth', () => ({
-  ensureAuthenticated: jest.fn().mockResolvedValue(true)
+  ensureAuthenticated: jest.fn().mockResolvedValue(true),
 }));
 
 /**
@@ -29,7 +29,7 @@ function createMockClient(responses) {
         get: jest.fn().mockResolvedValue(currentResponse),
       };
       return chain;
-    })
+    }),
   };
   return mockClient;
 }
@@ -88,7 +88,7 @@ describe('resolveFolderPath', () => {
       const customFolderName = 'MyCustomFolder';
 
       const mockClient = createMockClient([
-        { value: [{ id: customFolderId, displayName: customFolderName }] }
+        { value: [{ id: customFolderId, displayName: customFolderName }] },
       ]);
       getGraphClient.mockResolvedValue(mockClient);
 
@@ -104,10 +104,12 @@ describe('resolveFolderPath', () => {
 
       const mockClient = createMockClient([
         { value: [] }, // exact match fails
-        { value: [
-          { id: 'other-id', displayName: 'OtherFolder' },
-          { id: customFolderId, displayName: 'projectalpha' }
-        ]}
+        {
+          value: [
+            { id: 'other-id', displayName: 'OtherFolder' },
+            { id: customFolderId, displayName: 'projectalpha' },
+          ],
+        },
       ]);
       getGraphClient.mockResolvedValue(mockClient);
 
@@ -120,10 +122,12 @@ describe('resolveFolderPath', () => {
     test('should throw error when simple folder not found', async () => {
       const mockClient = createMockClient([
         { value: [] }, // exact match fails
-        { value: [
-          { id: 'id1', displayName: 'Folder1' },
-          { id: 'id2', displayName: 'Folder2' }
-        ]} // case-insensitive search also fails
+        {
+          value: [
+            { id: 'id1', displayName: 'Folder1' },
+            { id: 'id2', displayName: 'Folder2' },
+          ],
+        }, // case-insensitive search also fails
       ]);
       getGraphClient.mockResolvedValue(mockClient);
 
@@ -140,7 +144,7 @@ describe('resolveFolderPath', () => {
         // findFolderInCollection for "NonExistent" at childFolders — exact filter empty
         { value: [] },
         // findFolderInCollection for "NonExistent" — top(100) fallback also empty
-        { value: [] }
+        { value: [] },
       ]);
       getGraphClient.mockResolvedValue(mockClient);
 
@@ -152,7 +156,7 @@ describe('resolveFolderPath', () => {
         // findFolderInCollection for "Finance" at me/mailFolders — exact filter finds it
         { value: [{ id: 'finance-id', displayName: 'Finance' }] },
         // findFolderInCollection for "Cards" at me/mailFolders/finance-id/childFolders — exact filter finds it
-        { value: [{ id: 'cards-id', displayName: 'Cards' }] }
+        { value: [{ id: 'cards-id', displayName: 'Cards' }] },
       ]);
       getGraphClient.mockResolvedValue(mockClient);
 
@@ -178,9 +182,7 @@ describe('getFolderIdByName', () => {
     const folderId = 'folder-id-123';
     const folderName = 'TestFolder';
 
-    const mockClient = createMockClient([
-      { value: [{ id: folderId, displayName: folderName }] }
-    ]);
+    const mockClient = createMockClient([{ value: [{ id: folderId, displayName: folderName }] }]);
     getGraphClient.mockResolvedValue(mockClient);
 
     const result = await getFolderIdByName(folderName);
@@ -195,7 +197,7 @@ describe('getFolderIdByName', () => {
 
     const mockClient = createMockClient([
       { value: [] }, // exact match fails
-      { value: [{ id: folderId, displayName: 'testfolder' }] }
+      { value: [{ id: folderId, displayName: 'testfolder' }] },
     ]);
     getGraphClient.mockResolvedValue(mockClient);
 
@@ -210,7 +212,7 @@ describe('getFolderIdByName', () => {
 
     const mockClient = createMockClient([
       { value: [] },
-      { value: [{ id: 'id1', displayName: 'OtherFolder' }] }
+      { value: [{ id: 'id1', displayName: 'OtherFolder' }] },
     ]);
     getGraphClient.mockResolvedValue(mockClient);
 
@@ -226,9 +228,9 @@ describe('getFolderIdByName', () => {
     const mockClient = {
       api: jest.fn(() => ({
         filter: jest.fn(() => ({
-          get: jest.fn().mockRejectedValue(new Error('API Error'))
-        }))
-      }))
+          get: jest.fn().mockRejectedValue(new Error('API Error')),
+        })),
+      })),
     };
     getGraphClient.mockResolvedValue(mockClient);
 
@@ -242,7 +244,7 @@ describe('getFolderIdByName', () => {
       // findFolderInCollection for "Finance" at me/mailFolders — exact filter finds it
       { value: [{ id: 'finance-id', displayName: 'Finance' }] },
       // findFolderInCollection for "Cards" at me/mailFolders/finance-id/childFolders — exact filter finds it
-      { value: [{ id: 'cards-id', displayName: 'Cards' }] }
+      { value: [{ id: 'cards-id', displayName: 'Cards' }] },
     ]);
     getGraphClient.mockResolvedValue(mockClient);
 
@@ -268,7 +270,7 @@ describe('resolveNestedFolderPath', () => {
       // Segment "Finance" — exact filter at me/mailFolders
       { value: [{ id: 'finance-id', displayName: 'Finance' }] },
       // Segment "Cards" — exact filter at me/mailFolders/finance-id/childFolders
-      { value: [{ id: 'cards-id', displayName: 'Cards' }] }
+      { value: [{ id: 'cards-id', displayName: 'Cards' }] },
     ]);
     getGraphClient.mockResolvedValue(mockClient);
 
@@ -285,7 +287,7 @@ describe('resolveNestedFolderPath', () => {
       // Segment "Cards" — exact filter at me/mailFolders/finance-id/childFolders
       { value: [{ id: 'cards-id', displayName: 'Cards' }] },
       // Segment "Amex" — exact filter at me/mailFolders/cards-id/childFolders
-      { value: [{ id: 'amex-id', displayName: 'Amex' }] }
+      { value: [{ id: 'amex-id', displayName: 'Amex' }] },
     ]);
     getGraphClient.mockResolvedValue(mockClient);
 
@@ -300,13 +302,11 @@ describe('resolveNestedFolderPath', () => {
       // Segment "Unknown" — exact filter at me/mailFolders returns empty
       { value: [] },
       // Fallback top(100) also returns empty
-      { value: [] }
+      { value: [] },
     ]);
     getGraphClient.mockResolvedValue(mockClient);
 
-    await expect(resolveNestedFolderPath('Unknown/Child')).rejects.toThrow(
-      'top-level folders'
-    );
+    await expect(resolveNestedFolderPath('Unknown/Child')).rejects.toThrow('top-level folders');
   });
 
   test('should throw when intermediate segment not found', async () => {
@@ -316,13 +316,11 @@ describe('resolveNestedFolderPath', () => {
       // Segment "Missing" — exact filter returns empty
       { value: [] },
       // Fallback top(100) also returns empty
-      { value: [] }
+      { value: [] },
     ]);
     getGraphClient.mockResolvedValue(mockClient);
 
-    await expect(resolveNestedFolderPath('Finance/Missing/Deep')).rejects.toThrow(
-      '"Finance"'
-    );
+    await expect(resolveNestedFolderPath('Finance/Missing/Deep')).rejects.toThrow('"Finance"');
   });
 
   test('should throw for empty path', async () => {
@@ -333,9 +331,7 @@ describe('resolveNestedFolderPath', () => {
     const segments = Array.from({ length: 11 }, (_, i) => `Folder${i}`);
     const deepPath = segments.join('/');
 
-    await expect(resolveNestedFolderPath(deepPath)).rejects.toThrow(
-      'exceeds maximum depth'
-    );
+    await expect(resolveNestedFolderPath(deepPath)).rejects.toThrow('exceeds maximum depth');
   });
 
   test('should use case-insensitive fallback for segments', async () => {
@@ -343,14 +339,16 @@ describe('resolveNestedFolderPath', () => {
       // Segment "finance" — exact filter returns empty
       { value: [] },
       // Fallback top(100) returns case-insensitive match
-      { value: [
-        { id: 'other-id', displayName: 'Other' },
-        { id: 'finance-id', displayName: 'Finance' }
-      ]},
+      {
+        value: [
+          { id: 'other-id', displayName: 'Other' },
+          { id: 'finance-id', displayName: 'Finance' },
+        ],
+      },
       // Segment "cards" — exact filter returns empty
       { value: [] },
       // Fallback top(100) returns case-insensitive match
-      { value: [{ id: 'cards-id', displayName: 'Cards' }] }
+      { value: [{ id: 'cards-id', displayName: 'Cards' }] },
     ]);
     getGraphClient.mockResolvedValue(mockClient);
 
@@ -372,9 +370,7 @@ describe('getAllFolders', () => {
   });
 
   test('should return empty array when no folders', async () => {
-    const mockClient = createMockClient([
-      { value: [] }
-    ]);
+    const mockClient = createMockClient([{ value: [] }]);
     getGraphClient.mockResolvedValue(mockClient);
 
     const result = await getAllFolders();
@@ -384,10 +380,24 @@ describe('getAllFolders', () => {
 
   test('should return top-level folders with path property', async () => {
     const mockClient = createMockClient([
-      { value: [
-        { id: 'id1', displayName: 'Inbox', childFolderCount: 0, totalItemCount: 10, unreadItemCount: 2 },
-        { id: 'id2', displayName: 'Sent', childFolderCount: 0, totalItemCount: 5, unreadItemCount: 0 }
-      ]}
+      {
+        value: [
+          {
+            id: 'id1',
+            displayName: 'Inbox',
+            childFolderCount: 0,
+            totalItemCount: 10,
+            unreadItemCount: 2,
+          },
+          {
+            id: 'id2',
+            displayName: 'Sent',
+            childFolderCount: 0,
+            totalItemCount: 5,
+            unreadItemCount: 0,
+          },
+        ],
+      },
     ]);
     getGraphClient.mockResolvedValue(mockClient);
 
@@ -403,13 +413,29 @@ describe('getAllFolders', () => {
   test('should recursively fetch child folders', async () => {
     const mockClient = createMockClient([
       // Top-level folders: Finance has 1 child
-      { value: [
-        { id: 'finance-id', displayName: 'Finance', childFolderCount: 1, totalItemCount: 3, unreadItemCount: 0 }
-      ]},
+      {
+        value: [
+          {
+            id: 'finance-id',
+            displayName: 'Finance',
+            childFolderCount: 1,
+            totalItemCount: 3,
+            unreadItemCount: 0,
+          },
+        ],
+      },
       // Child folders of Finance
-      { value: [
-        { id: 'cards-id', displayName: 'Cards', childFolderCount: 0, totalItemCount: 7, unreadItemCount: 1 }
-      ]}
+      {
+        value: [
+          {
+            id: 'cards-id',
+            displayName: 'Cards',
+            childFolderCount: 0,
+            totalItemCount: 7,
+            unreadItemCount: 1,
+          },
+        ],
+      },
     ]);
     getGraphClient.mockResolvedValue(mockClient);
 
@@ -425,13 +451,29 @@ describe('getAllFolders', () => {
   test('should respect maxDepth', async () => {
     const mockClient = createMockClient([
       // Top-level (depth 0)
-      { value: [
-        { id: 'a-id', displayName: 'A', childFolderCount: 1, totalItemCount: 0, unreadItemCount: 0 }
-      ]},
+      {
+        value: [
+          {
+            id: 'a-id',
+            displayName: 'A',
+            childFolderCount: 1,
+            totalItemCount: 0,
+            unreadItemCount: 0,
+          },
+        ],
+      },
       // Children of A (depth 1)
-      { value: [
-        { id: 'b-id', displayName: 'B', childFolderCount: 1, totalItemCount: 0, unreadItemCount: 0 }
-      ]}
+      {
+        value: [
+          {
+            id: 'b-id',
+            displayName: 'B',
+            childFolderCount: 1,
+            totalItemCount: 0,
+            unreadItemCount: 0,
+          },
+        ],
+      },
       // B's children (depth 2) should NOT be fetched because maxDepth=1
     ]);
     getGraphClient.mockResolvedValue(mockClient);
@@ -467,12 +509,18 @@ describe('getAllFolders', () => {
           top: jest.fn(() => chain),
           get: jest.fn().mockResolvedValue({
             value: [
-              { id: 'parent-id', displayName: 'Parent', childFolderCount: 2, totalItemCount: 0, unreadItemCount: 0 }
-            ]
+              {
+                id: 'parent-id',
+                displayName: 'Parent',
+                childFolderCount: 2,
+                totalItemCount: 0,
+                unreadItemCount: 0,
+              },
+            ],
           }),
         };
         return chain;
-      })
+      }),
     };
     getGraphClient.mockResolvedValue(mockClient);
 
@@ -484,4 +532,3 @@ describe('getAllFolders', () => {
     expect(result[0].id).toBe('parent-id');
   });
 });
-

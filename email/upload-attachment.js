@@ -13,9 +13,15 @@ const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/respo
 async function handleUploadAttachment(args) {
   const { id, name, contentBytes, contentType, isInline } = args;
 
-  if (!id) return makeErrorResponse('Email/Draft ID is required.');
-  if (!name) return makeErrorResponse('Attachment name is required.');
-  if (!contentBytes) return makeErrorResponse('Attachment content (base64) is required.');
+  if (!id) {
+    return makeErrorResponse('Email/Draft ID is required.');
+  }
+  if (!name) {
+    return makeErrorResponse('Attachment name is required.');
+  }
+  if (!contentBytes) {
+    return makeErrorResponse('Attachment content (base64) is required.');
+  }
 
   try {
     const client = await getGraphClient();
@@ -25,18 +31,22 @@ async function handleUploadAttachment(args) {
       name,
       contentBytes,
       contentType: contentType || 'application/octet-stream',
-      isInline: isInline || false
+      isInline: isInline || false,
     };
 
     const response = await client.api(`me/messages/${id}/attachments`).post(attachment);
 
     if (response && response.id) {
-      return makeResponse(`Attachment "${name}" uploaded successfully.\nID: ${response.id}\nSize: ${response.size} bytes`);
+      return makeResponse(
+        `Attachment "${name}" uploaded successfully.\nID: ${response.id}\nSize: ${response.size} bytes`
+      );
     } else {
       return makeErrorResponse('Failed to upload attachment.');
     }
   } catch (error) {
-    if (isAuthError(error)) return makeErrorResponse(error.message);
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
+    }
     return makeErrorResponse(`Error uploading attachment: ${error.message}`);
   }
 }

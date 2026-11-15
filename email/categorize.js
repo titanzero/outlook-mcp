@@ -13,15 +13,22 @@ const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/respo
 async function handleCategorizeEmail(args) {
   const { id, categories } = args;
 
-  if (!id) return makeErrorResponse('Email ID is required.');
+  if (!id) {
+    return makeErrorResponse('Email ID is required.');
+  }
 
   try {
     const client = await getGraphClient();
 
-    const categoryList = categories ? categories.split(',').map(c => c.trim()).filter(c => c) : [];
+    const categoryList = categories
+      ? categories
+        .split(',')
+        .map(c => c.trim())
+        .filter(c => c)
+      : [];
 
     const patch = {
-      categories: categoryList
+      categories: categoryList,
     };
 
     await client.api(`me/messages/${id}`).patch(patch);
@@ -32,7 +39,9 @@ async function handleCategorizeEmail(args) {
       return makeResponse(`Categories updated: ${categoryList.join(', ')}`);
     }
   } catch (error) {
-    if (isAuthError(error)) return makeErrorResponse(error.message);
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
+    }
     return makeErrorResponse(`Error updating email categories: ${error.message}`);
   }
 }

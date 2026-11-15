@@ -22,7 +22,7 @@ async function handleDeclineEvent(args) {
 
     // Request body
     const body = {
-      comment: comment || "Declined via API"
+      comment: comment || 'Declined via API',
     };
 
     // Make API call

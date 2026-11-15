@@ -3,8 +3,6 @@
  * Replaces the old token-storage.test.js.
  */
 const fs = require('fs').promises;
-const https = require('https');
-const path = require('path');
 
 // Mock fs.promises and https before requiring the module
 jest.mock('fs', () => ({
@@ -34,7 +32,7 @@ jest.mock('../../config', () => ({
 // We need to get a fresh module for each test to reset cachedTokens
 let tokenManager;
 
-// Helper to reload the module fresh 
+// Helper to reload the module fresh
 function reloadModule() {
   jest.resetModules();
   // Re-apply mocks after module reset
@@ -83,7 +81,10 @@ describe('token-manager', () => {
 
       const result = await tokenManager.loadTokens();
 
-      expect(fsPromises.readFile).toHaveBeenCalledWith('/mock/home/.outlook-mcp-tokens.json', 'utf8');
+      expect(fsPromises.readFile).toHaveBeenCalledWith(
+        '/mock/home/.outlook-mcp-tokens.json',
+        'utf8'
+      );
       expect(result).toEqual(mockTokens);
     });
 
@@ -119,9 +120,7 @@ describe('token-manager', () => {
       expect(errorReason).toBeTruthy();
       expect(errorReason.code).toBe('TOKEN_FILE_INVALID_JSON');
       expect(errorReason.path).toBe('/mock/home/.outlook-mcp-tokens.json');
-      expect(console.error).toHaveBeenCalledWith(
-        expect.stringContaining('Invalid token JSON')
-      );
+      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Invalid token JSON'));
     });
 
     test('should return null and set error reason for missing access_token', async () => {
@@ -134,9 +133,7 @@ describe('token-manager', () => {
       const errorReason = tokenManager.getLastErrorReason();
       expect(errorReason).toBeTruthy();
       expect(errorReason.code).toBe('TOKEN_FILE_INVALID_SHAPE');
-      expect(console.error).toHaveBeenCalledWith(
-        expect.stringContaining('has no access_token')
-      );
+      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('has no access_token'));
     });
 
     test('should return null and set error reason for non-object JSON', async () => {
@@ -215,12 +212,12 @@ describe('token-manager', () => {
     });
 
     test('should return true if within 5-min buffer', () => {
-      const tokens = { expires_at: Date.now() + (4 * 60 * 1000) }; // 4 min from now
+      const tokens = { expires_at: Date.now() + 4 * 60 * 1000 }; // 4 min from now
       expect(tokenManager.isExpired(tokens)).toBe(true);
     });
 
     test('should return false if outside buffer', () => {
-      const tokens = { expires_at: Date.now() + (10 * 60 * 1000) }; // 10 min from now
+      const tokens = { expires_at: Date.now() + 10 * 60 * 1000 }; // 10 min from now
       expect(tokenManager.isExpired(tokens)).toBe(false);
     });
   });
@@ -306,9 +303,7 @@ describe('token-manager', () => {
       const errorReason = tokenManager.getLastErrorReason();
       expect(errorReason).toBeTruthy();
       expect(errorReason.code).toBe('TOKEN_FILE_INVALID_JSON');
-      expect(console.error).toHaveBeenCalledWith(
-        expect.stringContaining('Invalid token JSON')
-      );
+      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Invalid token JSON'));
     });
 
     test('should return null and set error reason for missing access_token', () => {
@@ -392,7 +387,9 @@ describe('token-manager', () => {
     beforeEach(() => {
       mockRequest = {
         on: jest.fn((event, cb) => {
-          if (event === 'error') mockRequest.errorHandler = cb;
+          if (event === 'error') {
+            mockRequest.errorHandler = cb;
+          }
           return mockRequest;
         }),
         write: jest.fn(),
@@ -427,9 +424,10 @@ describe('token-manager', () => {
       }));
       const tm = require('../../auth/token-manager');
 
-      await expect(tm.exchangeCodeForTokens('code123'))
-        .rejects.toThrow('Client ID or Client Secret is not configured');
-      
+      await expect(tm.exchangeCodeForTokens('code123')).rejects.toThrow(
+        'Client ID or Client Secret is not configured'
+      );
+
       const errorReason = tm.getLastErrorReason();
       expect(errorReason).toBeTruthy();
       expect(errorReason.code).toBe('CLIENT_CONFIG_MISSING');
@@ -444,7 +442,7 @@ describe('token-manager', () => {
         refresh_token: 'new_refresh_token',
         expires_in: 3600,
         scope: 'User.Read',
-        token_type: 'Bearer'
+        token_type: 'Bearer',
       };
 
       const exchangePromise = tokenManager.exchangeCodeForTokens('auth_code_123');
@@ -453,9 +451,13 @@ describe('token-manager', () => {
       const mockRes = {
         statusCode: 200,
         on: (event, cb) => {
-          if (event === 'data') cb(Buffer.from(JSON.stringify(tokenResponse)));
-          if (event === 'end') cb();
-        }
+          if (event === 'data') {
+            cb(Buffer.from(JSON.stringify(tokenResponse)));
+          }
+          if (event === 'end') {
+            cb();
+          }
+        },
       };
       mockRequest.callback(mockRes);
 
@@ -475,14 +477,18 @@ describe('token-manager', () => {
       const mockRes = {
         statusCode: 400,
         on: (event, cb) => {
-          if (event === 'data') cb(Buffer.from(JSON.stringify(errorResponse)));
-          if (event === 'end') cb();
-        }
+          if (event === 'data') {
+            cb(Buffer.from(JSON.stringify(errorResponse)));
+          }
+          if (event === 'end') {
+            cb();
+          }
+        },
       };
       mockRequest.callback(mockRes);
 
       await expect(exchangePromise).rejects.toThrow('Bad auth code');
-      
+
       const errorReason = tokenManager.getLastErrorReason();
       expect(errorReason).toBeTruthy();
       expect(errorReason.code).toBe('CODE_EXCHANGE_FAILED');
@@ -495,7 +501,7 @@ describe('token-manager', () => {
       mockRequest.errorHandler(new Error('Network fail'));
 
       await expect(exchangePromise).rejects.toThrow('Network fail');
-      
+
       const errorReason = tokenManager.getLastErrorReason();
       expect(errorReason).toBeTruthy();
       expect(errorReason.code).toBe('CODE_EXCHANGE_NETWORK_ERROR');

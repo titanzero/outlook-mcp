@@ -13,8 +13,12 @@ const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/respo
 async function handleDeleteAttachment(args) {
   const { id, attachmentId } = args;
 
-  if (!id) return makeErrorResponse('Email/Draft ID is required.');
-  if (!attachmentId) return makeErrorResponse('Attachment ID is required.');
+  if (!id) {
+    return makeErrorResponse('Email/Draft ID is required.');
+  }
+  if (!attachmentId) {
+    return makeErrorResponse('Attachment ID is required.');
+  }
 
   try {
     const client = await getGraphClient();
@@ -23,7 +27,9 @@ async function handleDeleteAttachment(args) {
 
     return makeResponse('Attachment deleted successfully.');
   } catch (error) {
-    if (isAuthError(error)) return makeErrorResponse(error.message);
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
+    }
     return makeErrorResponse(`Error deleting attachment: ${error.message}`);
   }
 }

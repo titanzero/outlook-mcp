@@ -4,7 +4,7 @@ const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/respo
 const { registerMailboxResources } = require('./resources');
 const { z } = require('zod');
 
-async function handleGetMailboxSettings(args) {
+async function handleGetMailboxSettings(_args) {
   try {
     const client = await getGraphClient();
     const settings = await client.api('me/mailboxSettings').get();
@@ -32,19 +32,25 @@ async function handleGetMailboxSettings(args) {
       ars.scheduledEnd ? `  To:   ${ars.scheduledEnd}` : '',
       ars.internalMessage ? `  Internal: ${ars.internalMessage}` : '',
       ars.externalMessage ? `  External: ${ars.externalMessage}` : '',
-    ].filter(Boolean).join('\n');
+    ]
+      .filter(Boolean)
+      .join('\n');
 
     return makeResponse(formatResponse(structured, textFallback));
   } catch (error) {
-    if (isAuthError(error)) return makeErrorResponse(error.message);
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
+    }
     return makeErrorResponse(`Error fetching mailbox settings: ${error.message}`);
   }
 }
 
-async function handleSetOutOfOffice(args) {
-  const { status, internalMessage, externalMessage, startTime, endTime } = args;
+async function handleSetOutOfOffice(_args) {
+  const { status, internalMessage, externalMessage, startTime, endTime } = _args;
 
-  if (!status) return makeErrorResponse('status is required: "enabled", "scheduled", or "disabled".');
+  if (!status) {
+    return makeErrorResponse('status is required: "enabled", "scheduled", or "disabled".');
+  }
 
   const validStatuses = ['enabled', 'scheduled', 'disabled'];
   if (!validStatuses.includes(status)) {
@@ -59,16 +65,26 @@ async function handleSetOutOfOffice(args) {
     const client = await getGraphClient();
 
     const automaticRepliesSetting = { status };
-    if (internalMessage !== undefined) automaticRepliesSetting.internalReplyMessage = internalMessage;
-    if (externalMessage !== undefined) automaticRepliesSetting.externalReplyMessage = externalMessage;
-    if (startTime) automaticRepliesSetting.scheduledStartDateTime = { dateTime: startTime, timeZone: 'UTC' };
-    if (endTime) automaticRepliesSetting.scheduledEndDateTime = { dateTime: endTime, timeZone: 'UTC' };
+    if (internalMessage !== undefined) {
+      automaticRepliesSetting.internalReplyMessage = internalMessage;
+    }
+    if (externalMessage !== undefined) {
+      automaticRepliesSetting.externalReplyMessage = externalMessage;
+    }
+    if (startTime) {
+      automaticRepliesSetting.scheduledStartDateTime = { dateTime: startTime, timeZone: 'UTC' };
+    }
+    if (endTime) {
+      automaticRepliesSetting.scheduledEndDateTime = { dateTime: endTime, timeZone: 'UTC' };
+    }
 
     await client.api('me/mailboxSettings').patch({ automaticRepliesSetting });
 
     return makeResponse(`Out-of-office set to "${status}" successfully.`);
   } catch (error) {
-    if (isAuthError(error)) return makeErrorResponse(error.message);
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
+    }
     return makeErrorResponse(`Error setting out-of-office: ${error.message}`);
   }
 }
@@ -79,35 +95,47 @@ async function handleSetOutOfOffice(args) {
  */
 function registerMailboxTools(server) {
   server.tool(
-    "get-mailbox-settings",
-    "Returns mailbox settings including timezone, language, and auto-reply (out-of-office) status",
+    'get-mailbox-settings',
+    'Returns mailbox settings including timezone, language, and auto-reply (out-of-office) status',
     {},
     {
       annotations: {
         readOnlyHint: true,
-        openWorldHint: false
-      }
+        openWorldHint: false,
+      },
     },
     handleGetMailboxSettings
   );
 
   server.tool(
-    "set-out-of-office",
-    "Enables, schedules, or disables automatic out-of-office replies",
+    'set-out-of-office',
+    'Enables, schedules, or disables automatic out-of-office replies',
     {
-      status: z.enum(["enabled", "scheduled", "disabled"]).describe("Auto-reply status"),
-      internalMessage: z.string().optional().describe("Reply message for people inside your organisation"),
-      externalMessage: z.string().optional().describe("Reply message for people outside your organisation"),
-      startTime: z.string().optional().describe("ISO 8601 start time (required when status is 'scheduled')"),
-      endTime: z.string().optional().describe("ISO 8601 end time (required when status is 'scheduled')")
+      status: z.enum(['enabled', 'scheduled', 'disabled']).describe('Auto-reply status'),
+      internalMessage: z
+        .string()
+        .optional()
+        .describe('Reply message for people inside your organisation'),
+      externalMessage: z
+        .string()
+        .optional()
+        .describe('Reply message for people outside your organisation'),
+      startTime: z
+        .string()
+        .optional()
+        .describe("ISO 8601 start time (required when status is 'scheduled')"),
+      endTime: z
+        .string()
+        .optional()
+        .describe("ISO 8601 end time (required when status is 'scheduled')"),
     },
     {
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
         idempotentHint: true,
-        openWorldHint: false
-      }
+        openWorldHint: false,
+      },
     },
     handleSetOutOfOffice
   );
@@ -117,5 +145,5 @@ module.exports = {
   registerMailboxTools,
   registerMailboxResources,
   handleGetMailboxSettings,
-  handleSetOutOfOffice
+  handleSetOutOfOffice,
 };

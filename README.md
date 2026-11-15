@@ -22,10 +22,10 @@ Built on [Model Context Protocol](https://modelcontextprotocol.io) · Powered by
 
 This MCP server turns any compatible AI assistant into a full-featured **Outlook assistant**. Instead of clicking through the Outlook UI, just ask your AI:
 
-> *"Show me unread emails from this week"*
-> *"Schedule a meeting with Alice tomorrow at 3pm and check if she's free first"*
-> *"Forward that email to my team and create a follow-up task"*
-> *"Set my out-of-office until Friday"*
+> _"Show me unread emails from this week"_
+> _"Schedule a meeting with Alice tomorrow at 3pm and check if she's free first"_
+> _"Forward that email to my team and create a follow-up task"_
+> _"Set my out-of-office until Friday"_
 
 Your AI handles authentication, API calls, pagination, filtering — everything. You just talk.
 
@@ -33,16 +33,16 @@ Your AI handles authentication, API calls, pagination, filtering — everything.
 
 ## Capabilities
 
-| Area | Tools | What your AI can do |
-|---|---|---|
-| **Email** | 13 | List, search, read (preview or full body), send, reply, reply-all, forward, delete, mark read/unread, manage drafts, list and download attachments |
-| **Calendar** | 10 | List calendars, list events, create, update, accept, tentatively accept, decline, cancel, delete, check free/busy schedules |
-| **Folders** | 3 | List folder hierarchy, create folders, move emails between folders |
-| **Contacts** | 4 | List/search, create, update, delete contacts in your address book |
-| **Mailbox** | 2 | Get mailbox settings (timezone, language), set out-of-office auto-replies |
-| **Tasks** | 5 | List task lists, list tasks, create, complete, delete (Microsoft To Do) |
-| **Rules** | 5 | List, create, update, delete inbox rules and change rule execution order |
-| **Auth** | 3 | OAuth 2.0 with automatic token refresh — authenticate once, use forever |
+| Area         | Tools | What your AI can do                                                                                                                                |
+| ------------ | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Email**    | 13    | List, search, read (preview or full body), send, reply, reply-all, forward, delete, mark read/unread, manage drafts, list and download attachments |
+| **Calendar** | 10    | List calendars, list events, create, update, accept, tentatively accept, decline, cancel, delete, check free/busy schedules                        |
+| **Folders**  | 3     | List folder hierarchy, create folders, move emails between folders                                                                                 |
+| **Contacts** | 4     | List/search, create, update, delete contacts in your address book                                                                                  |
+| **Mailbox**  | 2     | Get mailbox settings (timezone, language), set out-of-office auto-replies                                                                          |
+| **Tasks**    | 5     | List task lists, list tasks, create, complete, delete (Microsoft To Do)                                                                            |
+| **Rules**    | 5     | List, create, update, delete inbox rules and change rule execution order                                                                           |
+| **Auth**     | 3     | OAuth 2.0 with automatic token refresh — authenticate once, use forever                                                                            |
 
 **45 tools total.**
 
@@ -218,15 +218,15 @@ scripts/                  ── CLI utilities & debug helpers
 
 ## Available Commands
 
-| Command | Description |
-|---|---|
-| `npm install` | Install dependencies |
-| `npm start` | Start the MCP server (stdio) |
-| `npm run auth-server` | Start OAuth server on port 3333 |
-| `npm run inspect` | Launch MCP Inspector for interactive testing |
-| `npm test` | Run Jest test suite |
-| `npm run debug` | Print env vars and start server |
-| `npx kill-port 3333` | Free port 3333 if occupied |
+| Command               | Description                                  |
+| --------------------- | -------------------------------------------- |
+| `npm install`         | Install dependencies                         |
+| `npm start`           | Start the MCP server (stdio)                 |
+| `npm run auth-server` | Start OAuth server on port 3333              |
+| `npm run inspect`     | Launch MCP Inspector for interactive testing |
+| `npm test`            | Run Jest test suite                          |
+| `npm run debug`       | Print env vars and start server              |
+| `npx kill-port 3333`  | Free port 3333 if occupied                   |
 
 ---
 

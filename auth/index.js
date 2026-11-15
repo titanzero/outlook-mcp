@@ -11,45 +11,52 @@ const { registerAuthTools } = require('./tools');
  */
 function buildAuthError() {
   const reason = tokenManager.getLastErrorReason();
-  let message = 'Authentication required. Please use the \'authenticate\' tool first.';
+  let message = "Authentication required. Please use the 'authenticate' tool first.";
 
   if (reason && reason.code) {
     switch (reason.code) {
-      case 'TOKEN_FILE_MISSING':
-        message = `Authentication required: token file not found at ${reason.path}. ` +
-          `Start the auth server with \`npm run auth-server\` and use the 'authenticate' tool to sign in.`;
-        break;
-      case 'TOKEN_FILE_INVALID_JSON':
-        message = `Authentication failed: your token file at ${reason.path} contains invalid JSON. ` +
-          `Delete the file and run the 'authenticate' tool again to regenerate it.`;
-        break;
-      case 'TOKEN_FILE_INVALID_SHAPE':
-        message = `Authentication failed: your token file at ${reason.path} is missing required fields (like access_token). ` +
-          `Delete the file and re-run the 'authenticate' tool.`;
-        break;
-      case 'CLIENT_CONFIG_MISSING':
-        message = 'Authentication configuration is missing: OUTLOOK_CLIENT_ID and/or OUTLOOK_CLIENT_SECRET are not set. ' +
+    case 'TOKEN_FILE_MISSING':
+      message =
+          `Authentication required: token file not found at ${reason.path}. ` +
+          "Start the auth server with `npm run auth-server` and use the 'authenticate' tool to sign in.";
+      break;
+    case 'TOKEN_FILE_INVALID_JSON':
+      message =
+          `Authentication failed: your token file at ${reason.path} contains invalid JSON. ` +
+          "Delete the file and run the 'authenticate' tool again to regenerate it.";
+      break;
+    case 'TOKEN_FILE_INVALID_SHAPE':
+      message =
+          `Authentication failed: your token file at ${reason.path} is missing required fields (like access_token). ` +
+          "Delete the file and re-run the 'authenticate' tool.";
+      break;
+    case 'CLIENT_CONFIG_MISSING':
+      message =
+          'Authentication configuration is missing: OUTLOOK_CLIENT_ID and/or OUTLOOK_CLIENT_SECRET are not set. ' +
           'Update your MCP client config to include these env vars (using the Azure client ID and secret VALUE), then authenticate again.';
-        break;
-      case 'REFRESH_FAILED_INVALID_CLIENT':
-      case 'CODE_EXCHANGE_INVALID_CLIENT':
-        message = 'Authentication failed: Microsoft rejected the client credentials (invalid_client). ' +
+      break;
+    case 'REFRESH_FAILED_INVALID_CLIENT':
+    case 'CODE_EXCHANGE_INVALID_CLIENT':
+      message =
+          'Authentication failed: Microsoft rejected the client credentials (invalid_client). ' +
           'Double-check that OUTLOOK_CLIENT_ID and OUTLOOK_CLIENT_SECRET are correctly configured (using the Azure client secret VALUE, not the Secret ID), then re-authenticate.';
-        break;
-      case 'REFRESH_FAILED_NO_REFRESH_TOKEN':
-        message = 'Authentication required: no refresh token found. ' +
-          'Please run the \'authenticate\' tool to sign in again.';
-        break;
-      case 'REFRESH_NETWORK_ERROR':
-      case 'CODE_EXCHANGE_NETWORK_ERROR':
-        message = `Authentication failed due to a network error talking to Microsoft: ${reason.message}. ` +
-          'Please check your internet connection and try the \'authenticate\' tool again.';
-        break;
-      default:
-        if (reason.message) {
-          message = `Authentication failed: ${reason.message}`;
-        }
-        break;
+      break;
+    case 'REFRESH_FAILED_NO_REFRESH_TOKEN':
+      message =
+          'Authentication required: no refresh token found. ' +
+          "Please run the 'authenticate' tool to sign in again.";
+      break;
+    case 'REFRESH_NETWORK_ERROR':
+    case 'CODE_EXCHANGE_NETWORK_ERROR':
+      message =
+          `Authentication failed due to a network error talking to Microsoft: ${reason.message}. ` +
+          "Please check your internet connection and try the 'authenticate' tool again.";
+      break;
+    default:
+      if (reason.message) {
+        message = `Authentication failed: ${reason.message}`;
+      }
+      break;
     }
   }
 
@@ -85,5 +92,5 @@ async function ensureAuthenticated(forceNew = false) {
 module.exports = {
   tokenManager,
   registerAuthTools,
-  ensureAuthenticated
+  ensureAuthenticated,
 };

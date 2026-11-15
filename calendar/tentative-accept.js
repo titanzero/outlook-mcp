@@ -4,14 +4,18 @@ const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/respo
 async function handleTentativelyAcceptEvent(args) {
   const { eventId, comment = '' } = args;
 
-  if (!eventId) return makeErrorResponse('Event ID is required.');
+  if (!eventId) {
+    return makeErrorResponse('Event ID is required.');
+  }
 
   try {
     const client = await getGraphClient();
     await client.api(`me/events/${eventId}/tentativelyAccept`).post({ comment });
-    return makeResponse(`Event tentatively accepted.`);
+    return makeResponse('Event tentatively accepted.');
   } catch (error) {
-    if (isAuthError(error)) return makeErrorResponse(error.message);
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
+    }
     return makeErrorResponse(`Error tentatively accepting event: ${error.message}`);
   }
 }

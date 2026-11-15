@@ -35,12 +35,16 @@ function resolveEventDates(event) {
  * @returns {string}
  */
 function formatAttendees(attendees) {
-  if (!attendees || attendees.length === 0) return '';
-  return attendees.map(a => {
-    const name = a.emailAddress?.name || a.emailAddress?.address || 'Unknown';
-    const status = a.status?.response || '';
-    return status ? `${name} (${status})` : name;
-  }).join(', ');
+  if (!attendees || attendees.length === 0) {
+    return '';
+  }
+  return attendees
+    .map(a => {
+      const name = a.emailAddress?.name || a.emailAddress?.address || 'Unknown';
+      const status = a.status?.response || '';
+      return status ? `${name} (${status})` : name;
+    })
+    .join(', ');
 }
 
 /**
@@ -70,16 +74,20 @@ function buildEventRows(events) {
  * @returns {string}
  */
 function buildEventText(events) {
-  const eventList = events.map((event, index) => {
-    const { startDate, endDate } = resolveEventDates(event);
-    const location = event.location?.displayName || 'No location';
+  const eventList = events
+    .map((event, index) => {
+      const { startDate, endDate } = resolveEventDates(event);
+      const location = event.location?.displayName || 'No location';
 
-    let attendeesStr = '';
-    const atStr = formatAttendees(event.attendees);
-    if (atStr) attendeesStr = `\nAttendees: ${atStr}`;
+      let attendeesStr = '';
+      const atStr = formatAttendees(event.attendees);
+      if (atStr) {
+        attendeesStr = `\nAttendees: ${atStr}`;
+      }
 
-    return `${index + 1}. ${event.subject} - Location: ${location}\nStart: ${startDate}\nEnd: ${endDate}${attendeesStr}\nSummary: ${event.bodyPreview}\nID: ${event.id}\n`;
-  }).join("\n");
+      return `${index + 1}. ${event.subject} - Location: ${location}\nStart: ${startDate}\nEnd: ${endDate}${attendeesStr}\nSummary: ${event.bodyPreview}\nID: ${event.id}\n`;
+    })
+    .join('\n');
 
   return `Found ${events.length} events:\n\n${eventList}`;
 }
@@ -103,16 +111,17 @@ async function handleListEvents(args) {
     const endDateTime = endDate.toISOString();
 
     // Make API call
-    const response = await client.api('me/calendarView')
+    const response = await client
+      .api('me/calendarView')
       .query({
         startDateTime: startDateTime,
-        endDateTime: endDateTime
+        endDateTime: endDateTime,
       })
       .top(count)
       .orderby('start/dateTime')
       .select(config.CALENDAR_SELECT_FIELDS)
       .get();
-    
+
     if (!response.value || response.value.length === 0) {
       return makeResponse('No calendar events found.');
     }
@@ -127,7 +136,7 @@ async function handleListEvents(args) {
     if (isAuthError(error)) {
       return makeErrorResponse(error.message);
     }
-    
+
     return makeErrorResponse(`Error listing events: ${error.message}`);
   }
 }

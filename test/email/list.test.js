@@ -15,20 +15,20 @@ describe('handleListEmails', () => {
       id: 'email-1',
       subject: 'Test Email 1',
       from: {
-        emailAddress: { name: 'John Doe', address: 'john@example.com' }
+        emailAddress: { name: 'John Doe', address: 'john@example.com' },
       },
       receivedDateTime: '2024-01-15T10:30:00Z',
-      isRead: false
+      isRead: false,
     },
     {
       id: 'email-2',
       subject: 'Test Email 2',
       from: {
-        emailAddress: { name: 'Jane Smith', address: 'jane@example.com' }
+        emailAddress: { name: 'Jane Smith', address: 'jane@example.com' },
       },
       receivedDateTime: '2024-01-14T15:20:00Z',
-      isRead: true
-    }
+      isRead: true,
+    },
   ];
 
   beforeEach(() => {
@@ -102,7 +102,7 @@ describe('handleListEmails', () => {
         id: 'email-3',
         subject: 'No Sender Email',
         receivedDateTime: '2024-01-13T12:00:00Z',
-        isRead: true
+        isRead: true,
       };
 
       resolveFolderPath.mockResolvedValue(WELL_KNOWN_FOLDERS['inbox']);
