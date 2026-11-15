@@ -8,148 +8,198 @@ const handleUpdateEvent = require('./update');
 const handleTentativelyAcceptEvent = require('./tentative-accept');
 const handleListCalendars = require('./list-calendars');
 const handleGetFreeBusy = require('./free-busy');
+const { z } = require('zod');
 
-const calendarTools = [
-  {
-    name: "list-events",
-    description: "Lists upcoming events from your calendar",
-    inputSchema: {
-      type: "object",
-      properties: {
-        count: { type: "number", description: "Number of events to retrieve (default: 10, max: 50)" }
-      },
-      required: []
+/**
+ * Register calendar tools with the MCP server
+ * @param {McpServer} server - The MCP server instance
+ */
+function registerCalendarTools(server) {
+  // Read-only tools
+  server.tool(
+    "list-events",
+    "Lists upcoming events from your calendar",
+    {
+      count: z.number().int().positive().max(50).optional().describe("Number of events to retrieve (default: 10, max: 50)")
     },
-    handler: handleListEvents
-  },
-  {
-    name: "list-calendars",
-    description: "Lists all calendars in your Outlook account",
-    inputSchema: {
-      type: "object",
-      properties: {},
-      required: []
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false
+      }
     },
-    handler: handleListCalendars
-  },
-  {
-    name: "create-event",
-    description: "Creates a new calendar event",
-    inputSchema: {
-      type: "object",
-      properties: {
-        subject: { type: "string", description: "The subject of the event" },
-        start: { type: "string", description: "The start time of the event in ISO 8601 format" },
-        end: { type: "string", description: "The end time of the event in ISO 8601 format" },
-        attendees: { type: "array", items: { type: "string" }, description: "List of attendee email addresses" },
-        body: { type: "string", description: "Optional body content for the event" }
-      },
-      required: ["subject", "start", "end"]
+    handleListEvents
+  );
+
+  server.tool(
+    "list-calendars",
+    "Lists all calendars in your Outlook account",
+    {},
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false
+      }
     },
-    handler: handleCreateEvent
-  },
-  {
-    name: "update-event",
-    description: "Updates an existing calendar event",
-    inputSchema: {
-      type: "object",
-      properties: {
-        eventId: { type: "string", description: "ID of the event to update" },
-        subject: { type: "string", description: "New subject" },
-        start: { type: "string", description: "New start time in ISO 8601 format" },
-        end: { type: "string", description: "New end time in ISO 8601 format" },
-        location: { type: "string", description: "New location display name" },
-        body: { type: "string", description: "New body content" },
-        attendees: { type: "array", items: { type: "string" }, description: "Replacement list of attendee email addresses" },
-        isAllDay: { type: "boolean", description: "Whether the event is an all-day event" }
-      },
-      required: ["eventId"]
+    handleListCalendars
+  );
+
+  server.tool(
+    "get-free-busy",
+    "Returns the free/busy schedule for one or more users",
+    {
+      emails: z.string().describe("Comma-separated list of email addresses to check"),
+      startTime: z.string().describe("Start of the time range in ISO 8601 format"),
+      endTime: z.string().describe("End of the time range in ISO 8601 format"),
+      intervalMinutes: z.number().int().positive().optional().describe("Slot size in minutes for availabilityView (default: 30)")
     },
-    handler: handleUpdateEvent
-  },
-  {
-    name: "accept-event",
-    description: "Accepts a calendar event invitation",
-    inputSchema: {
-      type: "object",
-      properties: {
-        eventId: { type: "string", description: "The ID of the event to accept" },
-        comment: { type: "string", description: "Optional comment" }
-      },
-      required: ["eventId"]
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: true
+      }
     },
-    handler: handleAcceptEvent
-  },
-  {
-    name: "tentatively-accept-event",
-    description: "Tentatively accepts a calendar event invitation",
-    inputSchema: {
-      type: "object",
-      properties: {
-        eventId: { type: "string", description: "The ID of the event to tentatively accept" },
-        comment: { type: "string", description: "Optional comment" }
-      },
-      required: ["eventId"]
+    handleGetFreeBusy
+  );
+
+  // Write tools
+  server.tool(
+    "create-event",
+    "Creates a new calendar event",
+    {
+      subject: z.string().describe("The subject of the event"),
+      start: z.string().describe("The start time of the event in ISO 8601 format"),
+      end: z.string().describe("The end time of the event in ISO 8601 format"),
+      attendees: z.array(z.string()).optional().describe("List of attendee email addresses"),
+      body: z.string().optional().describe("Optional body content for the event")
     },
-    handler: handleTentativelyAcceptEvent
-  },
-  {
-    name: "decline-event",
-    description: "Declines a calendar event",
-    inputSchema: {
-      type: "object",
-      properties: {
-        eventId: { type: "string", description: "The ID of the event to decline" },
-        comment: { type: "string", description: "Optional comment" }
-      },
-      required: ["eventId"]
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true
+      }
     },
-    handler: handleDeclineEvent
-  },
-  {
-    name: "cancel-event",
-    description: "Cancels a calendar event",
-    inputSchema: {
-      type: "object",
-      properties: {
-        eventId: { type: "string", description: "The ID of the event to cancel" },
-        comment: { type: "string", description: "Optional comment" }
-      },
-      required: ["eventId"]
+    handleCreateEvent
+  );
+
+  server.tool(
+    "update-event",
+    "Updates an existing calendar event",
+    {
+      eventId: z.string().describe("ID of the event to update"),
+      subject: z.string().optional().describe("New subject"),
+      start: z.string().optional().describe("New start time in ISO 8601 format"),
+      end: z.string().optional().describe("New end time in ISO 8601 format"),
+      location: z.string().optional().describe("New location display name"),
+      body: z.string().optional().describe("New body content"),
+      attendees: z.array(z.string()).optional().describe("Replacement list of attendee email addresses"),
+      isAllDay: z.boolean().optional().describe("Whether the event is an all-day event")
     },
-    handler: handleCancelEvent
-  },
-  {
-    name: "delete-event",
-    description: "Deletes a calendar event",
-    inputSchema: {
-      type: "object",
-      properties: {
-        eventId: { type: "string", description: "The ID of the event to delete" }
-      },
-      required: ["eventId"]
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false
+      }
     },
-    handler: handleDeleteEvent
-  },
-  {
-    name: "get-free-busy",
-    description: "Returns the free/busy schedule for one or more users",
-    inputSchema: {
-      type: "object",
-      properties: {
-        emails: { type: "string", description: "Comma-separated list of email addresses to check" },
-        startTime: { type: "string", description: "Start of the time range in ISO 8601 format" },
-        endTime: { type: "string", description: "End of the time range in ISO 8601 format" },
-        intervalMinutes: { type: "number", description: "Slot size in minutes for availabilityView (default: 30)" }
-      },
-      required: ["emails", "startTime", "endTime"]
+    handleUpdateEvent
+  );
+
+  server.tool(
+    "accept-event",
+    "Accepts a calendar event invitation",
+    {
+      eventId: z.string().describe("The ID of the event to accept"),
+      comment: z.string().optional().describe("Optional comment")
     },
-    handler: handleGetFreeBusy
-  }
-];
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true
+      }
+    },
+    handleAcceptEvent
+  );
+
+  server.tool(
+    "tentatively-accept-event",
+    "Tentatively accepts a calendar event invitation",
+    {
+      eventId: z.string().describe("The ID of the event to tentatively accept"),
+      comment: z.string().optional().describe("Optional comment")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true
+      }
+    },
+    handleTentativelyAcceptEvent
+  );
+
+  server.tool(
+    "decline-event",
+    "Declines a calendar event",
+    {
+      eventId: z.string().describe("The ID of the event to decline"),
+      comment: z.string().optional().describe("Optional comment")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true
+      }
+    },
+    handleDeclineEvent
+  );
+
+  server.tool(
+    "cancel-event",
+    "Cancels a calendar event",
+    {
+      eventId: z.string().describe("The ID of the event to cancel"),
+      comment: z.string().optional().describe("Optional comment")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: true
+      }
+    },
+    handleCancelEvent
+  );
+
+  server.tool(
+    "delete-event",
+    "Deletes a calendar event",
+    {
+      eventId: z.string().describe("The ID of the event to delete")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: false
+      }
+    },
+    handleDeleteEvent
+  );
+}
 
 module.exports = {
-  calendarTools,
+  registerCalendarTools,
   handleListEvents,
   handleAcceptEvent,
   handleDeclineEvent,

@@ -3,6 +3,7 @@ const handleCreateRule = require('./create');
 const { getGraphClient } = require('../utils/graph-client');
 const config = require('../config');
 const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
+const { z } = require('zod');
 
 async function handleEditRuleSequence(args) {
   const { ruleName, sequence } = args;
@@ -89,85 +90,111 @@ async function handleUpdateRule(args) {
   }
 }
 
-const rulesTools = [
-  {
-    name: "list-rules",
-    description: "Lists inbox rules in your Outlook account",
-    inputSchema: {
-      type: "object",
-      properties: {
-        includeDetails: { type: "boolean", description: "Include detailed rule conditions and actions" }
-      },
-      required: []
+/**
+ * Register rules tools with the MCP server
+ * @param {McpServer} server - The MCP server instance
+ */
+function registerRulesTools(server) {
+  server.tool(
+    "list-rules",
+    "Lists inbox rules in your Outlook account",
+    {
+      includeDetails: z.boolean().optional().describe("Include detailed rule conditions and actions")
     },
-    handler: handleListRules
-  },
-  {
-    name: "create-rule",
-    description: "Creates a new inbox rule",
-    inputSchema: {
-      type: "object",
-      properties: {
-        name: { type: "string", description: "Name of the rule to create" },
-        fromAddresses: { type: "string", description: "Comma-separated list of sender email addresses for the rule" },
-        containsSubject: { type: "string", description: "Subject text the email must contain" },
-        hasAttachments: { type: "boolean", description: "Whether the rule applies to emails with attachments" },
-        moveToFolder: { type: "string", description: "Name of the folder to move matching emails to" },
-        markAsRead: { type: "boolean", description: "Whether to mark matching emails as read" },
-        isEnabled: { type: "boolean", description: "Whether the rule should be enabled after creation (default: true)" },
-        sequence: { type: "number", description: `Order in which the rule is executed (lower numbers run first, default: ${config.DEFAULT_RULE_SEQUENCE})` }
-      },
-      required: ["name"]
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false
+      }
     },
-    handler: handleCreateRule
-  },
-  {
-    name: "update-rule",
-    description: "Updates an existing inbox rule's conditions, actions, or status",
-    inputSchema: {
-      type: "object",
-      properties: {
-        ruleName: { type: "string", description: "Exact name of the rule to update" },
-        isEnabled: { type: "boolean", description: "Enable or disable the rule" },
-        sequence: { type: "number", description: "New execution order (lower runs first)" },
-        fromAddresses: { type: "string", description: "Comma-separated sender addresses (replaces existing)" },
-        containsSubject: { type: "string", description: "New subject filter text" },
-        moveToFolder: { type: "string", description: "New destination folder name" },
-        markAsRead: { type: "boolean", description: "Whether to mark matching emails as read" }
-      },
-      required: ["ruleName"]
+    handleListRules
+  );
+
+  server.tool(
+    "create-rule",
+    "Creates a new inbox rule",
+    {
+      name: z.string().describe("Name of the rule to create"),
+      fromAddresses: z.string().optional().describe("Comma-separated list of sender email addresses for the rule"),
+      containsSubject: z.string().optional().describe("Subject text the email must contain"),
+      hasAttachments: z.boolean().optional().describe("Whether the rule applies to emails with attachments"),
+      moveToFolder: z.string().optional().describe("Name of the folder to move matching emails to"),
+      markAsRead: z.boolean().optional().describe("Whether to mark matching emails as read"),
+      isEnabled: z.boolean().optional().describe("Whether the rule should be enabled after creation (default: true)"),
+      sequence: z.number().int().positive().optional().describe(`Order in which the rule is executed (lower numbers run first, default: ${config.DEFAULT_RULE_SEQUENCE})`)
     },
-    handler: handleUpdateRule
-  },
-  {
-    name: "edit-rule-sequence",
-    description: "Changes the execution order of an existing inbox rule",
-    inputSchema: {
-      type: "object",
-      properties: {
-        ruleName: { type: "string", description: "Name of the rule to modify" },
-        sequence: { type: "number", description: "New sequence value for the rule (lower numbers run first)" }
-      },
-      required: ["ruleName", "sequence"]
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: false
+      }
     },
-    handler: handleEditRuleSequence
-  },
-  {
-    name: "delete-rule",
-    description: "Deletes an existing inbox rule",
-    inputSchema: {
-      type: "object",
-      properties: {
-        ruleName: { type: "string", description: "Exact name of the rule to delete" }
-      },
-      required: ["ruleName"]
+    handleCreateRule
+  );
+
+  server.tool(
+    "update-rule",
+    "Updates an existing inbox rule's conditions, actions, or status",
+    {
+      ruleName: z.string().describe("Exact name of the rule to update"),
+      isEnabled: z.boolean().optional().describe("Enable or disable the rule"),
+      sequence: z.number().int().positive().optional().describe("New execution order (lower runs first)"),
+      fromAddresses: z.string().optional().describe("Comma-separated sender addresses (replaces existing)"),
+      containsSubject: z.string().optional().describe("New subject filter text"),
+      moveToFolder: z.string().optional().describe("New destination folder name"),
+      markAsRead: z.boolean().optional().describe("Whether to mark matching emails as read")
     },
-    handler: handleDeleteRule
-  }
-];
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false
+      }
+    },
+    handleUpdateRule
+  );
+
+  server.tool(
+    "edit-rule-sequence",
+    "Changes the execution order of an existing inbox rule",
+    {
+      ruleName: z.string().describe("Name of the rule to modify"),
+      sequence: z.number().int().positive().describe("New sequence value for the rule (lower numbers run first)")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false
+      }
+    },
+    handleEditRuleSequence
+  );
+
+  server.tool(
+    "delete-rule",
+    "Deletes an existing inbox rule",
+    {
+      ruleName: z.string().describe("Exact name of the rule to delete")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: false
+      }
+    },
+    handleDeleteRule
+  );
+}
 
 module.exports = {
-  rulesTools,
+  registerRulesTools,
   handleListRules,
   handleCreateRule,
   handleEditRuleSequence,
