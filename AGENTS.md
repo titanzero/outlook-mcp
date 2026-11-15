@@ -132,3 +132,16 @@ Adding a new tool is straightforward:
 2. Export `{ name, description, inputSchema, handler }`
 3. Add it to the module's `index.js` exports
 4. It's automatically registered via `index.js` at the root
+
+## Git Conventions
+
+- **Conventional Commits**: Use `type(scope): description` format
+  - `feat:` — new feature
+  - `fix:` — bug fix
+  - `chore:` — maintenance, tooling, deps
+  - `docs:` — documentation only
+  - `refactor:` — code restructure
+  - `test:` — test changes
+  - `perf:` — performance improvement
+- **Branch names**: `feat/short-name`, `fix/short-name`, `chore/short-name`
+- **Workflow**: Squash feature branches to single commit before merge to main
