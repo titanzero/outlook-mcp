@@ -10,9 +10,9 @@
 
 Built on [Model Context Protocol](https://modelcontextprotocol.io) · Powered by [Microsoft Graph API](https://learn.microsoft.com/en-us/graph/overview)
 
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![MCP SDK](https://img.shields.io/badge/MCP_SDK-1.29-blueviolet)](https://www.npmjs.com/package/@modelcontextprotocol/sdk)
+[![MCP SDK](https://img.shields.io/badge/MCP_SDK-1.32-blueviolet)](https://www.npmjs.com/package/@modelcontextprotocol/sdk)
 
 </div>
 
@@ -20,20 +20,20 @@ Built on [Model Context Protocol](https://modelcontextprotocol.io) · Powered by
 
 ## What is this?
 
-This MCP server turns Claude into a full-featured **Outlook assistant**. Instead of clicking through the Outlook UI, just ask Claude:
+This MCP server turns any compatible AI assistant into a full-featured **Outlook assistant**. Instead of clicking through the Outlook UI, just ask your AI:
 
 > *"Show me unread emails from this week"*
 > *"Schedule a meeting with Alice tomorrow at 3pm and check if she's free first"*
 > *"Forward that email to my team and create a follow-up task"*
 > *"Set my out-of-office until Friday"*
 
-Claude handles authentication, API calls, pagination, filtering — everything. You just talk.
+Your AI handles authentication, API calls, pagination, filtering — everything. You just talk.
 
 ---
 
 ## Capabilities
 
-| Area | Tools | What Claude can do |
+| Area | Tools | What your AI can do |
 |---|---|---|
 | **Email** | 13 | List, search, read (preview or full body), send, reply, reply-all, forward, delete, mark read/unread, manage drafts, list and download attachments |
 | **Calendar** | 10 | List calendars, list events, create, update, accept, tentatively accept, decline, cancel, delete, check free/busy schedules |
@@ -63,7 +63,7 @@ cp .env.example .env
 # 3. Start the OAuth server and authenticate
 npm run auth-server
 
-# 4. Add to Claude Desktop config and start using!
+# 4. Add to your MCP client config and start using!
 ```
 
 ---
@@ -133,9 +133,9 @@ OUTLOOK_CLIENT_SECRET=your-client-secret-VALUE
 
 > **Important:** Always use the secret **VALUE** from Azure, not the Secret ID.
 
-### Claude Desktop
+### MCP Client Configuration
 
-Add to your Claude Desktop config (`claude_desktop_config.json`):
+Add to your MCP client config (e.g., `claude_desktop_config.json`, VS Code settings, etc.):
 
 ```json
 {
@@ -152,6 +152,8 @@ Add to your Claude Desktop config (`claude_desktop_config.json`):
 }
 ```
 
+See [AGENTS.md](./AGENTS.md) for client-specific examples.
+
 ### Advanced
 
 Edit `config.js` to customize server name, timezone, pagination limits, field selections, and response format (`toon` or `text`).
@@ -161,9 +163,9 @@ Edit `config.js` to customize server name, timezone, pagination limits, field se
 ## Authentication Flow
 
 ```
-You ──ask Claude──▸ "authenticate"
+You ──ask AI──▸ "authenticate"
                         │
-Claude returns URL ◂────┘
+AI returns URL ◂────┘
                         │
 You open URL in browser ▸ Microsoft login ▸ Grant permissions
                                                     │
@@ -180,7 +182,7 @@ You open URL in browser ▸ Microsoft login ▸ Grant permissions
 npm run auth-server
 ```
 
-**Step 2** — Ask Claude to `authenticate`, open the URL, sign in, done.
+**Step 2** — Ask your AI to `authenticate`, open the URL, sign in, done.
 
 Tokens persist in `~/.outlook-mcp-tokens.json` and refresh automatically.
 
