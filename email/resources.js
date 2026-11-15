@@ -5,6 +5,8 @@
 const { getGraphClient, graphGetPaginated } = require('../utils/graph-client');
 const { resolveFolderPath } = require('./folder-utils');
 const { isAuthError } = require('../utils/response-helpers');
+const { ResourceTemplate } = require("@modelcontextprotocol/sdk/server/mcp.js");
+const { getEmailFolderCompletions, getEventCompletions } = require('../completion');
 
 /**
  * Register email resources with the MCP server
@@ -83,10 +85,19 @@ function registerEmailResources(server) {
     }
   );
 
-  // Resource for individual email
+  // Resource for individual email with completion
+  const emailTemplate = new ResourceTemplate(
+    "outlook://emails/{emailId}",
+    {
+      complete: {
+        emailId: getEventCompletions
+      }
+    }
+  );
+
   server.resource(
     "outlook-email",
-    "outlook://emails/{emailId}",
+    emailTemplate,
     {
       title: "Email",
       description: "Access a specific email by ID"

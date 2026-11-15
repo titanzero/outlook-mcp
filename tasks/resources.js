@@ -4,6 +4,8 @@
  */
 const { getGraphClient, graphGetPaginated } = require('../utils/graph-client');
 const { isAuthError } = require('../utils/response-helpers');
+const { ResourceTemplate } = require("@modelcontextprotocol/sdk/server/mcp.js");
+const { getTaskListCompletions } = require('../completion');
 
 /**
  * Register tasks resources with the MCP server
@@ -56,10 +58,19 @@ function registerTasksResources(server) {
     }
   );
 
-  // Resource for individual task list with its tasks
+  // Resource for individual task list with its tasks - with completion
+  const taskListTemplate = new ResourceTemplate(
+    "outlook://tasks/lists/{listId}",
+    {
+      complete: {
+        listId: getTaskListCompletions
+      }
+    }
+  );
+
   server.resource(
     "outlook-task-list",
-    "outlook://tasks/lists/{listId}",
+    taskListTemplate,
     {
       title: "Task List",
       description: "Access a specific task list with its tasks"

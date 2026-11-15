@@ -4,17 +4,28 @@
  */
 const { getGraphClient } = require('../utils/graph-client');
 const { getAllFolders } = require('../email/folder-utils');
-const { isAuthError, makeErrorResponse } = require('../utils/response-helpers');
+const { isAuthError } = require('../utils/response-helpers');
+const { ResourceTemplate } = require("@modelcontextprotocol/sdk/server/mcp.js");
+const { getFolderCompletions } = require('../completion');
 
 /**
  * Register folder resources with the MCP server
  * @param {McpServer} server - The MCP server instance
  */
 function registerFolderResources(server) {
-  // Resource template for individual folders by name/path
-  server.resource(
-    "outlook-folders",
+  // Resource template for individual folders by name/path with completion
+  const folderTemplate = new ResourceTemplate(
     "outlook://folders/{folderName}",
+    {
+      complete: {
+        folderName: getFolderCompletions
+      }
+    }
+  );
+
+  server.resource(
+    "outlook-folder",
+    folderTemplate,
     {
       title: "Mail Folder",
       description: "Access a mail folder by name or path (e.g., 'Inbox', 'Inbox/Projects/ClientA')"

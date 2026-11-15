@@ -4,6 +4,8 @@
  */
 const { getGraphClient, graphGetPaginated } = require('../utils/graph-client');
 const { isAuthError } = require('../utils/response-helpers');
+const { ResourceTemplate } = require("@modelcontextprotocol/sdk/server/mcp.js");
+const { getRuleCompletions } = require('../completion');
 
 /**
  * Register rules resources with the MCP server
@@ -83,10 +85,19 @@ function registerRulesResources(server) {
     }
   );
 
-  // Resource for individual rule
+  // Resource for individual rule with completion
+  const ruleTemplate = new ResourceTemplate(
+    "outlook://rules/{ruleId}",
+    {
+      complete: {
+        ruleId: getRuleCompletions
+      }
+    }
+  );
+
   server.resource(
     "outlook-rule",
-    "outlook://rules/{ruleId}",
+    ruleTemplate,
     {
       title: "Inbox Rule",
       description: "Access a specific inbox rule by ID"
