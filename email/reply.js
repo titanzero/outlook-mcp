@@ -4,7 +4,9 @@ const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/respo
 async function handleReplyEmail(args) {
   const { id, comment = '', replyAll = false } = args;
 
-  if (!id) return makeErrorResponse('Email ID is required.');
+  if (!id) {
+    return makeErrorResponse('Email ID is required.');
+  }
 
   try {
     const client = await getGraphClient();
@@ -12,7 +14,9 @@ async function handleReplyEmail(args) {
     await client.api(`me/messages/${id}/${action}`).post({ comment });
     return makeResponse(`Email ${replyAll ? 'replied to all' : 'replied'} successfully.`);
   } catch (error) {
-    if (isAuthError(error)) return makeErrorResponse(error.message);
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
+    }
     return makeErrorResponse(`Error replying to email: ${error.message}`);
   }
 }

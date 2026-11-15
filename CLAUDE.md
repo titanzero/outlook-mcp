@@ -32,12 +32,12 @@ Restart Claude Desktop after config changes.
 
 ## Quick Reference
 
-| Task | Command |
-|---|---|
-| Install deps | `npm install` |
-| Start server | `npm start` |
-| Start auth server | `npm run auth-server` |
-| Open MCP Inspector | `npm run inspect` |
-| Run tests | `npm test` |
-| Debug env | `npm run debug` |
-| Free port 3333 | `npx kill-port 3333` |
+| Task               | Command               |
+| ------------------ | --------------------- |
+| Install deps       | `npm install`         |
+| Start server       | `npm start`           |
+| Start auth server  | `npm run auth-server` |
+| Open MCP Inspector | `npm run inspect`     |
+| Run tests          | `npm test`            |
+| Debug env          | `npm run debug`       |
+| Free port 3333     | `npx kill-port 3333`  |

@@ -26,8 +26,8 @@ async function handleCreateEvent(args) {
       subject,
       start: { dateTime: start.dateTime || start, timeZone: start.timeZone || DEFAULT_TIMEZONE },
       end: { dateTime: end.dateTime || end, timeZone: end.timeZone || DEFAULT_TIMEZONE },
-      attendees: attendees?.map(email => ({ emailAddress: { address: email }, type: "required" })),
-      body: { contentType: "HTML", content: body || "" }
+      attendees: attendees?.map(email => ({ emailAddress: { address: email }, type: 'required' })),
+      body: { contentType: 'HTML', content: body || '' },
     };
 
     // Make API call

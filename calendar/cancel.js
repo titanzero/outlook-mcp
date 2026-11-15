@@ -22,7 +22,7 @@ async function handleCancelEvent(args) {
 
     // Request body
     const body = {
-      comment: comment || "Cancelled via API"
+      comment: comment || 'Cancelled via API',
     };
 
     // Make API call

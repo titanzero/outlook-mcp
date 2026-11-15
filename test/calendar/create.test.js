@@ -13,8 +13,8 @@ describe('handleCreateEvent', () => {
     mockPost = jest.fn().mockResolvedValue({ id: 'test_event_id' });
     mockClient = {
       api: jest.fn(() => ({
-        post: mockPost
-      }))
+        post: mockPost,
+      })),
     };
     getGraphClient.mockResolvedValue(mockClient);
   });
@@ -89,7 +89,9 @@ describe('handleCreateEvent', () => {
     };
 
     const result = await handleCreateEvent(args);
-    expect(result.content[0].text).toBe("Subject, start, and end times are required to create an event.");
+    expect(result.content[0].text).toBe(
+      'Subject, start, and end times are required to create an event.'
+    );
     expect(getGraphClient).not.toHaveBeenCalled();
     expect(mockClient.api).not.toHaveBeenCalled();
   });
@@ -101,7 +103,9 @@ describe('handleCreateEvent', () => {
     };
 
     const result = await handleCreateEvent(args);
-    expect(result.content[0].text).toBe("Subject, start, and end times are required to create an event.");
+    expect(result.content[0].text).toBe(
+      'Subject, start, and end times are required to create an event.'
+    );
     expect(getGraphClient).not.toHaveBeenCalled();
   });
 
@@ -112,7 +116,9 @@ describe('handleCreateEvent', () => {
     };
 
     const result = await handleCreateEvent(args);
-    expect(result.content[0].text).toBe("Subject, start, and end times are required to create an event.");
+    expect(result.content[0].text).toBe(
+      'Subject, start, and end times are required to create an event.'
+    );
     expect(getGraphClient).not.toHaveBeenCalled();
   });
 
@@ -141,6 +147,6 @@ describe('handleCreateEvent', () => {
     };
 
     const result = await handleCreateEvent(args);
-    expect(result.content[0].text).toBe("Error creating event: Graph API Error");
+    expect(result.content[0].text).toBe('Error creating event: Graph API Error');
   });
 });

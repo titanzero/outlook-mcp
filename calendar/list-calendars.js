@@ -12,7 +12,9 @@ async function handleListCalendars(args) {
 
     const calendars = response.value || [];
 
-    if (calendars.length === 0) return makeResponse('No calendars found.');
+    if (calendars.length === 0) {
+      return makeResponse('No calendars found.');
+    }
 
     const structured = calendars.map(c => ({
       id: c.id,
@@ -24,12 +26,19 @@ async function handleListCalendars(args) {
     }));
 
     const textFallback = calendars
-      .map(c => `- ${c.name}${c.isDefaultCalendar ? ' [default]' : ''}${c.canEdit ? '' : ' [read-only]'} (id: ${c.id})`)
+      .map(
+        c =>
+          `- ${c.name}${c.isDefaultCalendar ? ' [default]' : ''}${c.canEdit ? '' : ' [read-only]'} (id: ${c.id})`
+      )
       .join('\n');
 
-    return makeResponse(formatResponse(structured, `Calendars (${calendars.length}):\n${textFallback}`));
+    return makeResponse(
+      formatResponse(structured, `Calendars (${calendars.length}):\n${textFallback}`)
+    );
   } catch (error) {
-    if (isAuthError(error)) return makeErrorResponse(error.message);
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
+    }
     return makeErrorResponse(`Error listing calendars: ${error.message}`);
   }
 }

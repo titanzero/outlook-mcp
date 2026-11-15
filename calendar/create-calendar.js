@@ -21,15 +21,21 @@ async function handleCreateCalendar(args) {
     const client = await getGraphClient();
 
     const calendarData = { name };
-    if (color) calendarData.color = color;
-    if (isDefault !== undefined) calendarData.isDefaultCalendar = isDefault;
+    if (color) {
+      calendarData.color = color;
+    }
+    if (isDefault !== undefined) {
+      calendarData.isDefaultCalendar = isDefault;
+    }
 
     const response = await client.api('me/calendars').post(calendarData);
 
     if (response && response.id) {
       return makeResponse(`Successfully created calendar "${name}".\nID: ${response.id}`);
     } else {
-      return makeErrorResponse('Failed to create calendar. The server didn\'t return a calendar ID.');
+      return makeErrorResponse(
+        "Failed to create calendar. The server didn't return a calendar ID."
+      );
     }
   } catch (error) {
     if (isAuthError(error)) {

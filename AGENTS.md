@@ -64,14 +64,14 @@ scripts/              — CLI & debug one-off scripts (not imported by app modul
 
 ## Config Values (config.js)
 
-| Constant | Value |
-|---|---|
-| `DEFAULT_PAGE_SIZE` | 50 |
-| `MAX_RESULT_COUNT` | 1000 |
-| `DEFAULT_TIMEZONE` | "Central European Standard Time" |
-| `RESPONSE_FORMAT` | `process.env.OUTLOOK_RESPONSE_FORMAT \|\| 'toon'` |
-| `EMAIL_SELECT_FIELDS` | `id,subject,from,receivedDateTime,isRead` |
-| `EMAIL_DETAIL_FIELDS` | bodyPreview-based (no full body) |
+| Constant                 | Value                                             |
+| ------------------------ | ------------------------------------------------- |
+| `DEFAULT_PAGE_SIZE`      | 50                                                |
+| `MAX_RESULT_COUNT`       | 1000                                              |
+| `DEFAULT_TIMEZONE`       | "Central European Standard Time"                  |
+| `RESPONSE_FORMAT`        | `process.env.OUTLOOK_RESPONSE_FORMAT \|\| 'toon'` |
+| `EMAIL_SELECT_FIELDS`    | `id,subject,from,receivedDateTime,isRead`         |
+| `EMAIL_DETAIL_FIELDS`    | bodyPreview-based (no full body)                  |
 | `EMAIL_FULL_BODY_FIELDS` | includes `body` field (used when `fullBody=true`) |
 
 ## Environment Variables

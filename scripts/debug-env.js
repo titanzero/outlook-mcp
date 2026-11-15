@@ -13,4 +13,4 @@ try {
   require('../index');
 } catch (error) {
   console.error('ERROR LOADING INDEX.JS:', error);
-} 
+}

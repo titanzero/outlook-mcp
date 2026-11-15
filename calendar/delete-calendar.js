@@ -26,12 +26,16 @@ async function handleDeleteCalendar(args) {
 
     const calendar = calendars.find(c => c.name === name);
     if (!calendar) {
-      return makeErrorResponse(`Calendar "${name}" not found. Use 'list-calendars' to see available calendars.`);
+      return makeErrorResponse(
+        `Calendar "${name}" not found. Use 'list-calendars' to see available calendars.`
+      );
     }
 
     // Prevent deletion of default calendar
     if (calendar.isDefaultCalendar) {
-      return makeErrorResponse(`Cannot delete the default calendar "${name}". You must first set another calendar as default.`);
+      return makeErrorResponse(
+        `Cannot delete the default calendar "${name}". You must first set another calendar as default.`
+      );
     }
 
     // Delete the calendar

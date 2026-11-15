@@ -19,8 +19,10 @@ let _folderCache = { folders: null, timestamp: 0 };
  * @returns {boolean}
  */
 function isCacheValid() {
-  return _folderCache.folders !== null &&
-    (Date.now() - _folderCache.timestamp < config.FOLDER_CACHE_TTL_MS);
+  return (
+    _folderCache.folders !== null &&
+    Date.now() - _folderCache.timestamp < config.FOLDER_CACHE_TTL_MS
+  );
 }
 
 /**
@@ -35,12 +37,12 @@ function invalidateFolderCache() {
  * Well-known folder names and their endpoints
  */
 const WELL_KNOWN_FOLDERS = {
-  'inbox': 'me/mailFolders/inbox/messages',
-  'drafts': 'me/mailFolders/drafts/messages',
-  'sent': 'me/mailFolders/sentItems/messages',
-  'deleted': 'me/mailFolders/deletedItems/messages',
-  'junk': 'me/mailFolders/junkemail/messages',
-  'archive': 'me/mailFolders/archive/messages'
+  inbox: 'me/mailFolders/inbox/messages',
+  drafts: 'me/mailFolders/drafts/messages',
+  sent: 'me/mailFolders/sentItems/messages',
+  deleted: 'me/mailFolders/deletedItems/messages',
+  junk: 'me/mailFolders/junkemail/messages',
+  archive: 'me/mailFolders/archive/messages',
 };
 
 /**
@@ -71,9 +73,13 @@ async function resolveFolderPath(folderName) {
 
   // Folder not found — throw a descriptive error
   if (folderName.includes('/')) {
-    throw new Error(`Folder path "${folderName}" not found. Use 'list-folders' to see available folders and their hierarchy.`);
+    throw new Error(
+      `Folder path "${folderName}" not found. Use 'list-folders' to see available folders and their hierarchy.`
+    );
   } else {
-    throw new Error(`Folder "${folderName}" not found. Use 'list-folders' to see available folders, or specify a path like 'ParentFolder/SubFolder' for nested folders.`);
+    throw new Error(
+      `Folder "${folderName}" not found. Use 'list-folders' to see available folders, or specify a path like 'ParentFolder/SubFolder' for nested folders.`
+    );
   }
 }
 
@@ -108,33 +114,37 @@ async function getFolderIdByName(folderName) {
 
     // First try with exact match filter
     console.error(`Looking for folder with name "${folderName}"`);
-    const response = await client.api('me/mailFolders')
+    const response = await client
+      .api('me/mailFolders')
       .filter(`displayName eq '${folderName}'`)
       .get();
-    
+
     if (response.value && response.value.length > 0) {
       console.error(`Found folder "${folderName}" with ID: ${response.value[0].id}`);
       return response.value[0].id;
     }
-    
+
     // If exact match fails, try to get all folders and do a case-insensitive comparison
     console.error(`No exact match found for "${folderName}", trying case-insensitive search`);
-    const allFoldersResponse = await client.api('me/mailFolders')
+    const allFoldersResponse = await client
+      .api('me/mailFolders')
       .top(config.FOLDER_PAGE_SIZE)
       .get();
-    
+
     if (allFoldersResponse.value) {
       const lowerFolderName = folderName.toLowerCase();
       const matchingFolder = allFoldersResponse.value.find(
         folder => folder.displayName.toLowerCase() === lowerFolderName
       );
-      
+
       if (matchingFolder) {
-        console.error(`Found case-insensitive match for "${folderName}" with ID: ${matchingFolder.id}`);
+        console.error(
+          `Found case-insensitive match for "${folderName}" with ID: ${matchingFolder.id}`
+        );
         return matchingFolder.id;
       }
     }
-    
+
     console.error(`No folder found matching "${folderName}"`);
     return null;
   } catch (error) {
@@ -154,9 +164,7 @@ async function getFolderIdByName(folderName) {
 async function findFolderInCollection(client, endpoint, name) {
   // Try exact match filter first
   try {
-    const response = await client.api(endpoint)
-      .filter(`displayName eq '${name}'`)
-      .get();
+    const response = await client.api(endpoint).filter(`displayName eq '${name}'`).get();
 
     if (response.value && response.value.length > 0) {
       return response.value[0];
@@ -167,9 +175,7 @@ async function findFolderInCollection(client, endpoint, name) {
 
   // Fallback: fetch all and do case-insensitive comparison
   try {
-    const allResponse = await client.api(endpoint)
-      .top(config.FOLDER_PAGE_SIZE)
-      .get();
+    const allResponse = await client.api(endpoint).top(config.FOLDER_PAGE_SIZE).get();
 
     if (allResponse.value) {
       const lowerName = name.toLowerCase();
@@ -203,27 +209,26 @@ async function resolveNestedFolderPath(path) {
   }
 
   if (segments.length > config.FOLDER_PATH_MAX_DEPTH) {
-    throw new Error(`Folder path "${path}" exceeds maximum depth of ${config.FOLDER_PATH_MAX_DEPTH}`);
+    throw new Error(
+      `Folder path "${path}" exceeds maximum depth of ${config.FOLDER_PATH_MAX_DEPTH}`
+    );
   }
 
   console.error(`Resolving nested folder path: "${path}" (${segments.length} segments)`);
 
   const client = await getGraphClient();
   let parentId = null;
-  let resolvedSegments = [];
+  const resolvedSegments = [];
 
   for (const segment of segments) {
-    const endpoint = parentId
-      ? `me/mailFolders/${parentId}/childFolders`
-      : 'me/mailFolders';
+    const endpoint = parentId ? `me/mailFolders/${parentId}/childFolders` : 'me/mailFolders';
 
     console.error(`Looking for segment "${segment}" at endpoint: ${endpoint}`);
     const folder = await findFolderInCollection(client, endpoint, segment);
 
     if (!folder) {
-      const parentDesc = resolvedSegments.length > 0
-        ? `"${resolvedSegments.join('/')}"`
-        : 'top-level folders';
+      const parentDesc =
+        resolvedSegments.length > 0 ? `"${resolvedSegments.join('/')}"` : 'top-level folders';
       throw new Error(
         `Folder segment "${segment}" not found under ${parentDesc}. Full path: "${path}"`
       );
@@ -262,7 +267,8 @@ async function getAllFolders(maxDepth = config.FOLDER_TRAVERSAL_MAX_DEPTH) {
    */
   async function fetchFoldersRecursive(client, endpoint, parentPath, depth) {
     try {
-      const response = await client.api(endpoint)
+      const response = await client
+        .api(endpoint)
         .top(config.FOLDER_PAGE_SIZE)
         .select(selectFields)
         .get();
@@ -282,7 +288,12 @@ async function getAllFolders(maxDepth = config.FOLDER_TRAVERSAL_MAX_DEPTH) {
         if (folder.childFolderCount > 0 && depth < maxDepth) {
           try {
             const childEndpoint = `me/mailFolders/${folder.id}/childFolders`;
-            const children = await fetchFoldersRecursive(client, childEndpoint, folder.path, depth + 1);
+            const children = await fetchFoldersRecursive(
+              client,
+              childEndpoint,
+              folder.path,
+              depth + 1
+            );
             allFolders.push(...children);
           } catch (error) {
             console.error(`Error getting child folders for "${folder.path}": ${error.message}`);

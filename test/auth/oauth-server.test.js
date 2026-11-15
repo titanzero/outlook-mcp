@@ -67,7 +67,9 @@ describe('OAuth Server Routes', () => {
     it('should exchange code for tokens and return success HTML', async () => {
       tokenManager.exchangeCodeForTokens.mockResolvedValue({ access_token: 'mock_access_token' });
 
-      const response = await request(app).get(`/auth/callback?code=${mockAuthCode}&state=${mockState}`);
+      const response = await request(app).get(
+        `/auth/callback?code=${mockAuthCode}&state=${mockState}`
+      );
 
       expect(tokenManager.exchangeCodeForTokens).toHaveBeenCalledWith(mockAuthCode);
       expect(response.status).toBe(200);
@@ -77,7 +79,9 @@ describe('OAuth Server Routes', () => {
     it('should return 400 and error HTML if OAuth provider returns an error', async () => {
       const oauthError = 'access_denied';
       const oauthErrorDesc = 'User denied access';
-      const response = await request(app).get(`/auth/callback?error=${oauthError}&error_description=${oauthErrorDesc}&state=${mockState}`);
+      const response = await request(app).get(
+        `/auth/callback?error=${oauthError}&error_description=${oauthErrorDesc}&state=${mockState}`
+      );
 
       expect(response.status).toBe(400);
       expect(response.text).toContain('Authorization Failed');
@@ -109,7 +113,9 @@ describe('OAuth Server Routes', () => {
       const exchangeError = new Error('Token exchange process failed');
       tokenManager.exchangeCodeForTokens.mockRejectedValue(exchangeError);
 
-      const response = await request(app).get(`/auth/callback?code=${mockAuthCode}&state=${mockState}`);
+      const response = await request(app).get(
+        `/auth/callback?code=${mockAuthCode}&state=${mockState}`
+      );
 
       expect(response.status).toBe(500);
       expect(response.text).toContain('Token Exchange Failed');

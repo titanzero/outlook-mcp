@@ -14,28 +14,30 @@ const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/respo
  * @returns {string} - Plain text
  */
 function htmlToText(html) {
-  return html
-    // Remove style and script blocks entirely
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    // Add newlines for block-level elements
-    .replace(/<\/(p|div|h[1-6]|li|tr|br\s*\/?)>/gi, '\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    // Strip remaining tags
-    .replace(/<[^>]*>/g, '')
-    // Decode common HTML entities
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/&#x27;/gi, "'")
-    // Normalize whitespace: collapse multiple spaces/tabs within lines
-    .replace(/[ \t]+/g, ' ')
-    // Collapse 3+ consecutive newlines into 2
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  return (
+    html
+      // Remove style and script blocks entirely
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      // Add newlines for block-level elements
+      .replace(/<\/(p|div|h[1-6]|li|tr|br\s*\/?)>/gi, '\n')
+      .replace(/<br\s*\/?>/gi, '\n')
+      // Strip remaining tags
+      .replace(/<[^>]*>/g, '')
+      // Decode common HTML entities
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/&#x27;/gi, "'")
+      // Normalize whitespace: collapse multiple spaces/tabs within lines
+      .replace(/[ \t]+/g, ' ')
+      // Collapse 3+ consecutive newlines into 2
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  );
 }
 
 /**
@@ -46,40 +48,53 @@ function htmlToText(html) {
 async function handleReadEmail(args) {
   const emailId = args.id;
   const fullBody = args.fullBody === true;
-  
+
   if (!emailId) {
     return makeErrorResponse('Email ID is required.');
   }
-  
+
   try {
     const client = await getGraphClient();
-    
+
     // Use full body fields only when explicitly requested
     const selectFields = fullBody ? config.EMAIL_FULL_BODY_FIELDS : config.EMAIL_DETAIL_FIELDS;
-    
+
     try {
-      const email = await client.api(`me/messages/${emailId}`)
-        .select(selectFields)
-        .get();
-      
+      const email = await client.api(`me/messages/${emailId}`).select(selectFields).get();
+
       if (!email) {
         return makeErrorResponse(`Email with ID ${emailId} not found.`);
       }
-      
+
       // Format sender, recipients, etc.
-      const sender = email.from ? `${email.from.emailAddress.name} (${email.from.emailAddress.address})` : 'Unknown';
-      const to = email.toRecipients ? email.toRecipients.map(r => `${r.emailAddress.name} (${r.emailAddress.address})`).join(", ") : 'None';
-      const cc = email.ccRecipients && email.ccRecipients.length > 0 ? email.ccRecipients.map(r => `${r.emailAddress.name} (${r.emailAddress.address})`).join(", ") : 'None';
-      const bcc = email.bccRecipients && email.bccRecipients.length > 0 ? email.bccRecipients.map(r => `${r.emailAddress.name} (${r.emailAddress.address})`).join(", ") : 'None';
+      const sender = email.from
+        ? `${email.from.emailAddress.name} (${email.from.emailAddress.address})`
+        : 'Unknown';
+      const to = email.toRecipients
+        ? email.toRecipients
+          .map(r => `${r.emailAddress.name} (${r.emailAddress.address})`)
+          .join(', ')
+        : 'None';
+      const cc =
+        email.ccRecipients && email.ccRecipients.length > 0
+          ? email.ccRecipients
+            .map(r => `${r.emailAddress.name} (${r.emailAddress.address})`)
+            .join(', ')
+          : 'None';
+      const bcc =
+        email.bccRecipients && email.bccRecipients.length > 0
+          ? email.bccRecipients
+            .map(r => `${r.emailAddress.name} (${r.emailAddress.address})`)
+            .join(', ')
+          : 'None';
       const date = new Date(email.receivedDateTime).toLocaleString();
-      
+
       // Extract body content
       let body = '';
       if (fullBody && email.body) {
         // Full body requested: convert HTML to text or use plain text
-        body = email.body.contentType === 'html'
-          ? htmlToText(email.body.content)
-          : email.body.content;
+        body =
+          email.body.contentType === 'html' ? htmlToText(email.body.content) : email.body.content;
       } else {
         // Default: use bodyPreview (max 255 chars, clean plain text from Graph API)
         body = email.bodyPreview || 'No content';
@@ -95,9 +110,15 @@ async function handleReadEmail(args) {
         hasAttachments: !!email.hasAttachments,
         body,
       };
-      if (cc !== 'None') structured.cc = cc;
-      if (bcc !== 'None') structured.bcc = bcc;
-      if (!fullBody) structured.note = 'Preview — use fullBody=true for complete content';
+      if (cc !== 'None') {
+        structured.cc = cc;
+      }
+      if (bcc !== 'None') {
+        structured.bcc = bcc;
+      }
+      if (!fullBody) {
+        structured.note = 'Preview — use fullBody=true for complete content';
+      }
 
       // Build plain-text fallback
       const formattedEmail = `From: ${sender}
@@ -110,18 +131,24 @@ ${!fullBody ? '(Preview — use fullBody=true for complete content)\n' : ''}
 ${body}`;
 
       const text = formatResponse(structured, formattedEmail);
-      
+
       return makeResponse(text);
     } catch (error) {
-      if (isAuthError(error)) throw error;
+      if (isAuthError(error)) {
+        throw error;
+      }
       console.error(`Error reading email: ${error.message}`);
       if (error.message.includes("doesn't belong to the targeted mailbox")) {
-        return makeErrorResponse('The email ID seems invalid or doesn\'t belong to your mailbox. Please try with a different email ID.');
+        return makeErrorResponse(
+          "The email ID seems invalid or doesn't belong to your mailbox. Please try with a different email ID."
+        );
       }
       return makeErrorResponse(`Failed to read email: ${error.message}`);
     }
   } catch (error) {
-    if (isAuthError(error)) return makeErrorResponse(error.message);
+    if (isAuthError(error)) {
+      return makeErrorResponse(error.message);
+    }
     return makeErrorResponse(`Error accessing email: ${error.message}`);
   }
 }

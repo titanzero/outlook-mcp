@@ -28,26 +28,24 @@ async function handleSearchEmails(args) {
 
     // If no folder specified, search across all folders (me/messages)
     // This includes inbox, archive, sent items, etc.
-    const endpoint = folder
-      ? await resolveFolderPath(folder)
-      : 'me/messages';
+    const endpoint = folder ? await resolveFolderPath(folder) : 'me/messages';
     console.error(`Using endpoint: ${endpoint} for folder: ${folder || 'all'}`);
-    
+
     // Execute progressive search with pagination
     const response = await progressiveSearch(
       client,
-      endpoint, 
+      endpoint,
       { query, from, to, subject },
       { hasAttachments, unreadOnly },
       requestedCount
     );
-    
+
     return formatSearchResults(response);
   } catch (error) {
     if (isAuthError(error)) {
       return makeErrorResponse(error.message);
     }
-    
+
     return makeErrorResponse(`Error searching emails: ${error.message}`);
   }
 }
@@ -62,16 +60,17 @@ async function handleSearchEmails(args) {
  * @returns {Promise<object>} - Search results
  */
 async function progressiveSearch(client, endpoint, searchTerms, filterTerms, maxCount) {
-  const hasSearchTerms = searchTerms.query || searchTerms.from || searchTerms.to || searchTerms.subject;
+  const hasSearchTerms =
+    searchTerms.query || searchTerms.from || searchTerms.to || searchTerms.subject;
   const hasBooleanFilters = filterTerms.hasAttachments === true || filterTerms.unreadOnly === true;
 
   // If no search criteria provided, just return recent emails
   if (!hasSearchTerms && !hasBooleanFilters) {
-    console.error("No search criteria provided, returning recent emails");
+    console.error('No search criteria provided, returning recent emails');
     const basicParams = {
       $top: Math.min(config.DEFAULT_PAGE_SIZE, maxCount),
       $select: config.EMAIL_SELECT_FIELDS,
-      $orderby: 'receivedDateTime desc'
+      $orderby: 'receivedDateTime desc',
     };
     const response = await graphGetPaginated(client, endpoint, basicParams, maxCount);
     response._searchInfo = { strategy: 'recent-emails', reason: 'no-criteria' };
@@ -82,8 +81,12 @@ async function progressiveSearch(client, endpoint, searchTerms, filterTerms, max
   // NOTE: $search and $orderby cannot be used together on the messages endpoint
   if (hasSearchTerms) {
     try {
-      const params = buildSearchParams(searchTerms, filterTerms, Math.min(config.DEFAULT_PAGE_SIZE, maxCount));
-      console.error("Attempting combined search with params:", JSON.stringify(params));
+      const params = buildSearchParams(
+        searchTerms,
+        filterTerms,
+        Math.min(config.DEFAULT_PAGE_SIZE, maxCount)
+      );
+      console.error('Attempting combined search with params:', JSON.stringify(params));
 
       const response = await graphGetPaginated(client, endpoint, params, maxCount);
       console.error(`Combined search returned ${response.value?.length || 0} results`);
@@ -101,7 +104,7 @@ async function progressiveSearch(client, endpoint, searchTerms, filterTerms, max
           console.error(`Attempting search with only ${term}: "${searchTerms[term]}"`);
           const simplifiedParams = {
             $top: Math.min(config.DEFAULT_PAGE_SIZE, maxCount),
-            $select: config.EMAIL_SELECT_FIELDS
+            $select: config.EMAIL_SELECT_FIELDS,
             // No $orderby — incompatible with $search
           };
 
@@ -128,11 +131,11 @@ async function progressiveSearch(client, endpoint, searchTerms, filterTerms, max
   // 3. Try with only boolean filters (these use $filter, compatible with $orderby)
   if (hasBooleanFilters) {
     try {
-      console.error("Attempting search with only boolean filters");
+      console.error('Attempting search with only boolean filters');
       const filterOnlyParams = {
         $top: Math.min(config.DEFAULT_PAGE_SIZE, maxCount),
         $select: config.EMAIL_SELECT_FIELDS,
-        $orderby: 'receivedDateTime desc'
+        $orderby: 'receivedDateTime desc',
       };
       addBooleanFilters(filterOnlyParams, filterTerms);
 
@@ -146,11 +149,11 @@ async function progressiveSearch(client, endpoint, searchTerms, filterTerms, max
   }
 
   // 4. All strategies threw errors — fall back to recent emails
-  console.error("All search strategies failed with errors, falling back to recent emails");
+  console.error('All search strategies failed with errors, falling back to recent emails');
   const basicParams = {
     $top: Math.min(config.DEFAULT_PAGE_SIZE, maxCount),
     $select: config.EMAIL_SELECT_FIELDS,
-    $orderby: 'receivedDateTime desc'
+    $orderby: 'receivedDateTime desc',
   };
   const response = await graphGetPaginated(client, endpoint, basicParams, maxCount);
   response._searchInfo = { strategy: 'recent-emails', reason: 'all-strategies-errored' };
@@ -167,7 +170,7 @@ async function progressiveSearch(client, endpoint, searchTerms, filterTerms, max
 function buildSearchParams(searchTerms, filterTerms, count) {
   const params = {
     $top: count,
-    $select: config.EMAIL_SELECT_FIELDS
+    $select: config.EMAIL_SELECT_FIELDS,
   };
 
   // Build KQL search terms
@@ -213,15 +216,15 @@ function buildSearchParams(searchTerms, filterTerms, count) {
  */
 function addBooleanFilters(params, filterTerms) {
   const filterConditions = [];
-  
+
   if (filterTerms.hasAttachments === true) {
     filterConditions.push('hasAttachments eq true');
   }
-  
+
   if (filterTerms.unreadOnly === true) {
     filterConditions.push('isRead eq false');
   }
-  
+
   // Add $filter parameter if we have any filter conditions
   if (filterConditions.length > 0) {
     params.$filter = filterConditions.join(' and ');
@@ -253,12 +256,14 @@ function formatSearchResults(response) {
   });
 
   // Build plain-text fallback
-  const emailList = response.value.map((email, index) => {
-    const sender = email.from?.emailAddress || { name: 'Unknown', address: 'unknown' };
-    const date = new Date(email.receivedDateTime).toLocaleString();
-    const readStatus = email.isRead ? '' : '[UNREAD] ';
-    return `${index + 1}. ${readStatus}${date} - From: ${sender.name} (${sender.address})\nSubject: ${email.subject}\nID: ${email.id}\n`;
-  }).join("\n");
+  const emailList = response.value
+    .map((email, index) => {
+      const sender = email.from?.emailAddress || { name: 'Unknown', address: 'unknown' };
+      const date = new Date(email.receivedDateTime).toLocaleString();
+      const readStatus = email.isRead ? '' : '[UNREAD] ';
+      return `${index + 1}. ${readStatus}${date} - From: ${sender.name} (${sender.address})\nSubject: ${email.subject}\nID: ${email.id}\n`;
+    })
+    .join('\n');
 
   // Add search strategy info if available
   let additionalInfo = '';

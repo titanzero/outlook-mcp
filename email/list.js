@@ -35,12 +35,14 @@ function buildEmailRows(emails) {
  * @returns {string}
  */
 function buildEmailText(emails, folder) {
-  const emailList = emails.map((email, index) => {
-    const sender = email.from ? email.from.emailAddress : { name: 'Unknown', address: 'unknown' };
-    const date = new Date(email.receivedDateTime).toLocaleString();
-    const readStatus = email.isRead ? '' : '[UNREAD] ';
-    return `${index + 1}. ${readStatus}${date} - From: ${sender.name} (${sender.address})\nSubject: ${email.subject}\nID: ${email.id}\n`;
-  }).join("\n");
+  const emailList = emails
+    .map((email, index) => {
+      const sender = email.from ? email.from.emailAddress : { name: 'Unknown', address: 'unknown' };
+      const date = new Date(email.receivedDateTime).toLocaleString();
+      const readStatus = email.isRead ? '' : '[UNREAD] ';
+      return `${index + 1}. ${readStatus}${date} - From: ${sender.name} (${sender.address})\nSubject: ${email.subject}\nID: ${email.id}\n`;
+    })
+    .join('\n');
 
   return `Found ${emails.length} emails in ${folder}:\n\n${emailList}`;
 }
@@ -51,29 +53,29 @@ function buildEmailText(emails, folder) {
  * @returns {object} - MCP response
  */
 async function handleListEmails(args) {
-  const folder = args.folder || "inbox";
+  const folder = args.folder || 'inbox';
   const requestedCount = Math.min(args.count || 10, config.MAX_RESULT_COUNT);
-  
+
   try {
     const client = await getGraphClient();
 
     // Resolve the folder path
     const endpoint = await resolveFolderPath(folder);
-    
+
     // Query parameters
     const queryParams = {
       $top: Math.min(config.DEFAULT_PAGE_SIZE, requestedCount),
       $orderby: 'receivedDateTime desc',
-      $select: config.EMAIL_SELECT_FIELDS
+      $select: config.EMAIL_SELECT_FIELDS,
     };
-    
+
     // Make API call with pagination support
     const response = await graphGetPaginated(client, endpoint, queryParams, requestedCount);
-    
+
     if (!response.value || response.value.length === 0) {
       return makeResponse(`No emails found in ${folder}.`);
     }
-    
+
     const text = formatResponse(
       { emails: buildEmailRows(response.value) },
       buildEmailText(response.value, folder)
@@ -84,7 +86,7 @@ async function handleListEmails(args) {
     if (isAuthError(error)) {
       return makeErrorResponse(error.message);
     }
-    
+
     return makeErrorResponse(`Error listing emails: ${error.message}`);
   }
 }
