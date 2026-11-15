@@ -3,7 +3,7 @@
     "outlook-assistant": {
       "command": "node",
       "args": [
-        "/path/to/outlook-mcp/index.js"
+        "/absolute/path/to/outlook-mcp/index.js"
       ],
       "env": {
         "OUTLOOK_CLIENT_ID": "your-client-id-here",

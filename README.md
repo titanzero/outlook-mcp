@@ -20,20 +20,20 @@ Built on [Model Context Protocol](https://modelcontextprotocol.io) · Powered by
 
 ## What is this?
 
-This MCP server turns Claude into a full-featured **Outlook assistant**. Instead of clicking through the Outlook UI, just ask Claude:
+This MCP server turns any compatible AI assistant into a full-featured **Outlook assistant**. Instead of clicking through the Outlook UI, just ask your AI:
 
 > *"Show me unread emails from this week"*
 > *"Schedule a meeting with Alice tomorrow at 3pm and check if she's free first"*
 > *"Forward that email to my team and create a follow-up task"*
 > *"Set my out-of-office until Friday"*
 
-Claude handles authentication, API calls, pagination, filtering — everything. You just talk.
+Your AI handles authentication, API calls, pagination, filtering — everything. You just talk.
 
 ---
 
 ## Capabilities
 
-| Area | Tools | What Claude can do |
+| Area | Tools | What your AI can do |
 |---|---|---|
 | **Email** | 13 | List, search, read (preview or full body), send, reply, reply-all, forward, delete, mark read/unread, manage drafts, list and download attachments |
 | **Calendar** | 10 | List calendars, list events, create, update, accept, tentatively accept, decline, cancel, delete, check free/busy schedules |
@@ -63,7 +63,7 @@ cp .env.example .env
 # 3. Start the OAuth server and authenticate
 npm run auth-server
 
-# 4. Add to Claude Desktop config and start using!
+# 4. Add to your MCP client config and start using!
 ```
 
 ---
@@ -133,9 +133,9 @@ OUTLOOK_CLIENT_SECRET=your-client-secret-VALUE
 
 > **Important:** Always use the secret **VALUE** from Azure, not the Secret ID.
 
-### Claude Desktop
+### MCP Client Configuration
 
-Add to your Claude Desktop config (`claude_desktop_config.json`):
+Add to your MCP client config (e.g., `claude_desktop_config.json`, VS Code settings, etc.):
 
 ```json
 {
@@ -152,6 +152,8 @@ Add to your Claude Desktop config (`claude_desktop_config.json`):
 }
 ```
 
+See [AGENTS.md](./AGENTS.md) for client-specific examples.
+
 ### Advanced
 
 Edit `config.js` to customize server name, timezone, pagination limits, field selections, and response format (`toon` or `text`).
@@ -161,17 +163,17 @@ Edit `config.js` to customize server name, timezone, pagination limits, field se
 ## Authentication Flow
 
 ```
-You ──ask Claude──▸ "authenticate"
-                        │
-Claude returns URL ◂────┘
-                        │
+You ──ask AI──▸ "authenticate"
+                         │
+AI returns URL ◂────┘
+                         │
 You open URL in browser ▸ Microsoft login ▸ Grant permissions
-                                                    │
-                        ┌───────────────────────────┘
-                        ▼
-              OAuth callback on localhost:3333
-              Tokens saved to ~/.outlook-mcp-tokens.json
-              ✔ Auto-refresh — no re-auth needed
+                                                     │
+                         ┌───────────────────────────┘
+                         ▼
+               OAuth callback on localhost:3333
+               Tokens saved to ~/.outlook-mcp-tokens.json
+               ✔ Auto-refresh — no re-auth needed
 ```
 
 **Step 1** — Start the auth server (must be running before authenticating):
@@ -180,7 +182,7 @@ You open URL in browser ▸ Microsoft login ▸ Grant permissions
 npm run auth-server
 ```
 
-**Step 2** — Ask Claude to `authenticate`, open the URL, sign in, done.
+**Step 2** — Ask your AI to `authenticate`, open the URL, sign in, done.
 
 Tokens persist in `~/.outlook-mcp-tokens.json` and refresh automatically.
 
@@ -269,11 +271,11 @@ Token may be expired or corrupted. Delete `~/.outlook-mcp-tokens.json` and re-au
 </details>
 
 <details>
-<summary><strong>Server doesn't start in Claude Desktop</strong></summary>
+<summary><strong>Server doesn't start in MCP client</strong></summary>
 
-1. Verify the absolute path to `index.js` in your Claude Desktop config
+1. Verify the absolute path to `index.js` in your MCP client config
 2. Ensure `OUTLOOK_CLIENT_ID` and `OUTLOOK_CLIENT_SECRET` are set
-3. Restart Claude Desktop after config changes
+3. Restart your MCP client after config changes
 
 </details>
 
@@ -288,7 +290,7 @@ Adding a new tool is straightforward:
 3. Add it to the module's `index.js` exports
 4. It's automatically registered via `index.js` at the root
 
-See `.cursor/rules/new-tool.mdc` for the full checklist.
+See [AGENTS.md](./AGENTS.md) for the full checklist.
 
 ---
 
