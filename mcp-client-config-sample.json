@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "outlook-assistant": {
+      "command": "node",
+      "args": ["/absolute/path/to/outlook-mcp/index.js"],
+      "env": {
+        "OUTLOOK_CLIENT_ID": "your-application-client-id",
+        "OUTLOOK_CLIENT_SECRET": "your-client-secret-VALUE"
+      }
+    }
+  }
+}

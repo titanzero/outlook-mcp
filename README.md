@@ -33,18 +33,21 @@ Your AI handles authentication, API calls, pagination, filtering — everything.
 
 ## Capabilities
 
-| Area         | Tools | What your AI can do                                                                                                                                |
-| ------------ | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Email**    | 13    | List, search, read (preview or full body), send, reply, reply-all, forward, delete, mark read/unread, manage drafts, list and download attachments |
-| **Calendar** | 10    | List calendars, list events, create, update, accept, tentatively accept, decline, cancel, delete, check free/busy schedules                        |
-| **Folders**  | 3     | List folder hierarchy, create folders, move emails between folders                                                                                 |
-| **Contacts** | 4     | List/search, create, update, delete contacts in your address book                                                                                  |
-| **Mailbox**  | 2     | Get mailbox settings (timezone, language), set out-of-office auto-replies                                                                          |
-| **Tasks**    | 5     | List task lists, list tasks, create, complete, delete (Microsoft To Do)                                                                            |
-| **Rules**    | 5     | List, create, update, delete inbox rules and change rule execution order                                                                           |
-| **Auth**     | 3     | OAuth 2.0 with automatic token refresh — authenticate once, use forever                                                                            |
+| Area            | Tools | What your AI can do                                                                                                                                 |
+| --------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Email**       | 13    | List, search, read (preview or full body), send, reply, reply-all, forward, delete, mark read/unread, manage drafts, list and download attachments |
+| **Calendar**    | 10    | List calendars, list events, create, update, accept, tentatively accept, decline, cancel, delete, check free/busy schedules                         |
+| **Folders**     | 5     | List folder hierarchy, create folders, move emails between folders, rename folders, delete folders                                                  |
+| **Contacts**    | 6     | List/search, create (basic/full), update, delete contacts in your address book                                                                      |
+| **Mailbox**     | 2     | Get mailbox settings (timezone, language), set out-of-office auto-replies                                                                           |
+| **Tasks**       | 5     | List task lists, list tasks, create, update, complete, delete (Microsoft To Do)                                                                     |
+| **Rules**       | 5     | List, create, update, delete inbox rules and change rule execution order                                                                            |
+| **Auth**        | 3     | OAuth 2.0 with automatic token refresh — authenticate once, use forever                                                                             |
+| **Resources**   | 20    | 13 static resources + 7 resource templates across email, calendar, contacts, folders, mailbox, tasks, rules                                        |
+| **Prompts**     | 7     | Reusable prompt templates for common Outlook workflows                                                                                              |
+| **Completions** | 9     | Argument completion handlers for folder names, event IDs, contact emails, and more                                                                  |
 
-**45 tools total.**
+**55 tools, 20 resources, 7 prompts, 9 completions total.**
 
 ---
 
@@ -191,7 +194,7 @@ Tokens persist in `~/.outlook-mcp-tokens.json` and refresh automatically.
 ## Project Structure
 
 ```
-index.js                  ── MCP entry point
+index.js                  ── MCP entry point (McpServer with resources, prompts, completions)
 config.js                 ── centralized constants & settings
 outlook-auth-server.js    ── standalone OAuth server
 
@@ -200,11 +203,13 @@ email/                    ── list, search, read, send, reply, forward, delet
 │                            mark-as-read, attachments, drafts
 calendar/                 ── list calendars & events, create, update, accept,
 │                            tentatively-accept, decline, cancel, delete, free-busy
-folder/                   ── list, create, move
-contacts/                 ── list, create, update, delete
+folder/                   ── list, create, move, rename, delete
+contacts/                 ── list, create (basic/full), update, delete
 mailbox/                  ── settings, out-of-office
 tasks/                    ── task lists and tasks (Microsoft To Do)
 rules/                    ── list, create, update, delete, edit-sequence
+prompts/                  ── 7 reusable prompt templates
+completion/               ── 9 argument completion handlers
 
 utils/
 ├── graph-client.js       ── Graph SDK wrapper with pagination
@@ -290,7 +295,7 @@ Adding a new tool is straightforward:
 3. Add it to the module's `index.js` exports
 4. It's automatically registered via `index.js` at the root
 
-See `.cursor/rules/new-tool.mdc` for the full checklist.
+See [AGENTS.md](./AGENTS.md#extending-the-server) for the full checklist.
 
 ---
 
