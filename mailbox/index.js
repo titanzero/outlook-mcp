@@ -1,6 +1,7 @@
 const { getGraphClient } = require('../utils/graph-client');
 const { formatResponse } = require('../utils/response-formatter');
 const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
+const { registerMailboxResources } = require('./resources');
 const { z } = require('zod');
 
 async function handleGetMailboxSettings(args) {
@@ -114,6 +115,7 @@ function registerMailboxTools(server) {
 
 module.exports = {
   registerMailboxTools,
+  registerMailboxResources,
   handleGetMailboxSettings,
   handleSetOutOfOffice
 };

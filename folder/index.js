@@ -6,6 +6,7 @@ const handleCreateFolder = require('./create');
 const handleMoveEmails = require('./move');
 const handleRenameFolder = require('./rename');
 const handleDeleteFolder = require('./delete');
+const { registerFolderResources } = require('./resources');
 const { z } = require('zod');
 
 /**
@@ -104,6 +105,7 @@ function registerFolderTools(server) {
 
 module.exports = {
   registerFolderTools,
+  registerFolderResources,
   handleListFolders,
   handleCreateFolder,
   handleMoveEmails,

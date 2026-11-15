@@ -12,6 +12,7 @@ const handleFlagEmail = require('./flag');
 const handleCategorizeEmail = require('./categorize');
 const handleUploadAttachment = require('./upload-attachment');
 const handleDeleteAttachment = require('./delete-attachment');
+const { registerEmailResources } = require('./resources');
 const { z } = require('zod');
 
 /**
@@ -345,6 +346,7 @@ function registerEmailTools(server) {
 
 module.exports = {
   registerEmailTools,
+  registerEmailResources,
   handleListEmails,
   handleSearchEmails,
   handleReadEmail,

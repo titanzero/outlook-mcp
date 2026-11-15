@@ -3,6 +3,7 @@ const handleCreateRule = require('./create');
 const { getGraphClient } = require('../utils/graph-client');
 const config = require('../config');
 const { isAuthError, makeErrorResponse, makeResponse } = require('../utils/response-helpers');
+const { registerRulesResources } = require('./resources');
 const { z } = require('zod');
 
 async function handleEditRuleSequence(args) {
@@ -195,6 +196,7 @@ function registerRulesTools(server) {
 
 module.exports = {
   registerRulesTools,
+  registerRulesResources,
   handleListRules,
   handleCreateRule,
   handleEditRuleSequence,
