@@ -4,6 +4,7 @@
 const handleListFolders = require('./list');
 const handleCreateFolder = require('./create');
 const handleMoveEmails = require('./move');
+const handleRenameFolder = require('./rename');
 const { z } = require('zod');
 
 /**
@@ -63,11 +64,30 @@ function registerFolderTools(server) {
     },
     handleMoveEmails
   );
+
+  server.tool(
+    "rename-folder",
+    "Renames an existing mail folder",
+    {
+      name: z.string().describe("Current name of the folder to rename"),
+      newName: z.string().describe("New name for the folder")
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false
+      }
+    },
+    handleRenameFolder
+  );
 }
 
 module.exports = {
   registerFolderTools,
   handleListFolders,
   handleCreateFolder,
-  handleMoveEmails
+  handleMoveEmails,
+  handleRenameFolder
 };
