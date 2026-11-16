@@ -30,7 +30,7 @@ email/                — list, search, read, send, mark-as-read + folder-utils.
 calendar/             — list, create, accept, decline, cancel, delete, sharing.js, rooms.js, groups.js, view.js, reminders.js, online-meetings.js
 folder/               — list, create, move
 rules/                — list, create, edit-rule-sequence
-contacts/             — list, create, update, delete
+contacts/             — list, create, update, delete, folders.js, photos.js, lists.js, search.js
 mailbox/              — settings, out-of-office
 tasks/                — list, create, update, complete, delete
 
