@@ -13,6 +13,11 @@ const handleCategorizeEmail = require('./categorize');
 const handleUploadAttachment = require('./upload-attachment');
 const handleDeleteAttachment = require('./delete-attachment');
 const { registerEmailResources } = require('./resources');
+const { handleListSharedMailboxes, handleAccessSharedMailbox, handleListSharedMailboxFolders } = require('./shared-mailbox');
+const { handleListGroups, handleGetGroup, handleListGroupMembers, handleSendEmailToGroup } = require('./groups');
+const { handleListConversations, handleGetConversation } = require('./conversations');
+const { handleRecallMessage, handleGetRecallStatus } = require('./recall');
+const { handleKqlSearch, handleKqlHelp } = require('./kql-search');
 const { z } = require('zod');
 
 /**
@@ -404,6 +409,216 @@ function registerEmailTools(server) {
     },
     handleSendDraft
   );
+
+  // Shared Mailbox tools
+  server.tool(
+    'list-shared-mailboxes',
+    'Lists mailboxes you have delegate/shared access to (requires Mail.Read.Shared scope)',
+    {},
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    handleListSharedMailboxes
+  );
+
+  server.tool(
+    'access-shared-mailbox',
+    'Access emails from a shared/delegate mailbox by email address (requires Mail.Read.Shared scope)',
+    {
+      emailAddress: z.string().describe('Email address of the shared mailbox'),
+      folder: z.string().optional().describe("Folder to access (default: 'inbox')"),
+      count: z.number().int().positive().max(100).optional().describe('Number of emails to retrieve (default: 20, max: 100)'),
+    },
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    handleAccessSharedMailbox
+  );
+
+  server.tool(
+    'list-shared-mailbox-folders',
+    'Lists folders in a shared/delegate mailbox (requires Mail.Read.Shared scope)',
+    {
+      emailAddress: z.string().describe('Email address of the shared mailbox'),
+    },
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    handleListSharedMailboxFolders
+  );
+
+  // Microsoft 365 Groups / Distribution Lists tools
+  server.tool(
+    'list-groups',
+    'Lists all Microsoft 365 Groups and Distribution Lists you are a member of (requires Group.Read.All scope)',
+    {
+      count: z.number().int().positive().max(100).optional().describe('Number of groups to retrieve (default: 50, max: 100)'),
+    },
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    handleListGroups
+  );
+
+  server.tool(
+    'get-group',
+    'Gets detailed information about a group including members and owners (requires Group.Read.All scope)',
+    {
+      groupId: z.string().describe('ID of the group (from list-groups)'),
+    },
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    handleGetGroup
+  );
+
+  server.tool(
+    'list-group-members',
+    'Lists members of a Microsoft 365 Group or Distribution List (requires Group.Read.All scope)',
+    {
+      groupId: z.string().describe('ID of the group (from list-groups)'),
+      count: z.number().int().positive().max(999).optional().describe('Number of members to retrieve (default: 100, max: 999)'),
+    },
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    handleListGroupMembers
+  );
+
+  server.tool(
+    'send-email-to-group',
+    'Sends an email to a Microsoft 365 Group or Distribution List (requires Group.Read.All scope)',
+    {
+      groupId: z.string().describe('ID of the group (from list-groups)'),
+      subject: z.string().describe('Email subject'),
+      body: z.string().describe('Email body content (HTML)'),
+      importance: z.enum(['normal', 'high', 'low']).optional().describe('Email importance (normal, high, low)'),
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+    },
+    handleSendEmailToGroup
+  );
+
+  // Conversation/Thread view tools
+  server.tool(
+    'list-conversations',
+    'Lists email conversations (threaded view) grouped by conversation ID',
+    {
+      folder: z.string().optional().describe("Folder to list conversations from (default: 'inbox')"),
+      count: z.number().int().positive().max(100).optional().describe('Number of conversations to retrieve (default: 20, max: 100)'),
+    },
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    handleListConversations
+  );
+
+  server.tool(
+    'get-conversation',
+    'Gets the full conversation thread by conversation ID',
+    {
+      conversationId: z.string().describe('Conversation ID (from list-conversations)'),
+      count: z.number().int().positive().max(200).optional().describe('Number of messages in thread to retrieve (default: 50, max: 200)'),
+    },
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    handleGetConversation
+  );
+
+  // Message Recall tools
+  server.tool(
+    'recall-message',
+    'Attempts to recall a sent message (only works within same organization, unread messages)',
+    {
+      messageId: z.string().describe('ID of the sent message to recall (from sent items)'),
+    },
+    {
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: false,
+      },
+    },
+    handleRecallMessage
+  );
+
+  server.tool(
+    'get-recall-status',
+    'Checks the recall status for a message by looking for recall notifications',
+    {
+      messageId: z.string().describe('ID of the recalled message'),
+    },
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    handleGetRecallStatus
+  );
+
+  // KQL Search tools
+  server.tool(
+    'search-emails-kql',
+    'Searches emails using Microsoft Graph KQL (Keyword Query Language) syntax for advanced queries',
+    {
+      query: z.string().describe('KQL query string (e.g., from:john subject:report hasattachment:true)'),
+      folder: z.string().optional().describe("Optional folder to limit search scope (default: all folders)"),
+      count: z.number().int().positive().max(500).optional().describe('Number of results to return (default: 50, max: 500)'),
+    },
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    handleKqlSearch
+  );
+
+  server.tool(
+    'kql-help',
+    'Returns KQL (Keyword Query Language) syntax reference and examples for email search',
+    {},
+    {
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
+    },
+    handleKqlHelp
+  );
 }
 
 module.exports = {
@@ -426,4 +641,17 @@ module.exports = {
   handleCategorizeEmail,
   handleUploadAttachment,
   handleDeleteAttachment,
+  handleListSharedMailboxes,
+  handleAccessSharedMailbox,
+  handleListSharedMailboxFolders,
+  handleListGroups,
+  handleGetGroup,
+  handleListGroupMembers,
+  handleSendEmailToGroup,
+  handleListConversations,
+  handleGetConversation,
+  handleRecallMessage,
+  handleGetRecallStatus,
+  handleKqlSearch,
+  handleKqlHelp,
 };

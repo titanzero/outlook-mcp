@@ -26,10 +26,13 @@ auth/
   token-manager.js    — token load/save/refresh logic
   oauth-server.js     — OAuth callback/exchange helpers
 
-email/                — list, search, read, send, mark-as-read + folder-utils.js
+email/                — list, search, read, send, mark-as-read + folder-utils.js, shared-mailbox.js, groups.js, conversations.js, recall.js, kql-search.js
 calendar/             — list, create, accept, decline, cancel, delete
 folder/               — list, create, move
 rules/                — list, create, edit-rule-sequence
+contacts/             — list, create, update, delete
+mailbox/              — settings, out-of-office
+tasks/                — list, create, update, complete, delete
 
 utils/
   graph-client.js     — Graph SDK wrapper: `getGraphClient()`, `graphGetPaginated()`
@@ -84,7 +87,15 @@ scripts/              — CLI & debug one-off scripts (not imported by app modul
 
 ## Auth Flow
 
-1. Register Azure app with permissions: Mail.Read, Mail.ReadWrite, Mail.Send, Calendars.Read, Calendars.ReadWrite, etc.
+1. Register Azure app with permissions: 
+   - Mail.Read, Mail.ReadWrite, Mail.Send, **Mail.Read.Shared**
+   - Calendars.Read, Calendars.ReadWrite, **Calendars.Read.Shared**
+   - Contacts.Read, **Contacts.ReadWrite**
+   - MailboxSettings.ReadWrite, MailboxSettings.Read
+   - MailboxFolder.ReadWrite, MailboxFolder.Read
+   - **Tasks.ReadWrite**
+   - **Group.Read.All**
+   - User.Read, offline_access, email, openid
 2. `npm run auth-server` → opens port 3333
 3. Use `authenticate` tool → returns OAuth URL
 4. Complete browser login → tokens saved to `~/.outlook-mcp-tokens.json`
