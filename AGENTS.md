@@ -32,7 +32,7 @@ folder/               — list, create, move
 rules/                — list, create, edit-rule-sequence
 contacts/             — list, create, update, delete, folders.js, photos.js, lists.js, search.js
 mailbox/              — settings, out-of-office
-tasks/                — list, create, update, complete, delete
+tasks/                — list, create, update, complete, delete, steps.js, recurrence.js, attachments.js, linked-resources.js, categories.js
 
 utils/
   graph-client.js     — Graph SDK wrapper: `getGraphClient()`, `graphGetPaginated()`
