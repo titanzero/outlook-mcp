@@ -35,13 +35,18 @@ const DEFAULT_SCOPES = [
   'Mail.Read',
   'Mail.ReadWrite',
   'Mail.Send',
+  'Mail.Read.Shared',
   'Calendars.Read',
   'Calendars.ReadWrite',
+  'Calendars.Read.Shared',
   'Contacts.Read',
+  'Contacts.ReadWrite',
   'MailboxSettings.ReadWrite',
   'MailboxSettings.Read',
   'MailboxFolder.ReadWrite',
   'MailboxFolder.Read',
+  'Tasks.ReadWrite',
+  'Group.Read.All',
 ];
 const parsedScopes = (process.env.OUTLOOK_SCOPES || '').split(/\s+/).filter(Boolean);
 
