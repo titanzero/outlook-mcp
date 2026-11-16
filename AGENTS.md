@@ -31,7 +31,7 @@ calendar/             — list, create, accept, decline, cancel, delete, sharing
 folder/               — list, create, move, bulk-operations.js, permissions.js, statistics.js, hierarchy.js
 rules/                — list, create, edit-rule-sequence, advanced.js, templates.js
 contacts/             — list, create, update, delete, folders.js, photos.js, lists.js, search.js
-mailbox/              — settings, out-of-office
+mailbox/              — settings, out-of-office, working-hours.js, delegates.js, language-region.js, mail-tips.js
 tasks/                — list, create, update, complete, delete, steps.js, recurrence.js, attachments.js, linked-resources.js, categories.js
 
 utils/
