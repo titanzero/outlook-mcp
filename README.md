@@ -35,19 +35,19 @@ Your AI handles authentication, API calls, pagination, filtering — everything.
 
 | Area            | Tools | What your AI can do                                                                                                                                 |
 | --------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Email**       | 13    | List, search, read (preview or full body), send, reply, reply-all, forward, delete, mark read/unread, manage drafts, list and download attachments |
-| **Calendar**    | 10    | List calendars, list events, create, update, accept, tentatively accept, decline, cancel, delete, check free/busy schedules                         |
-| **Folders**     | 5     | List folder hierarchy, create folders, move emails between folders, rename folders, delete folders                                                  |
-| **Contacts**    | 6     | List/search, create (basic/full), update, delete contacts in your address book                                                                      |
-| **Mailbox**     | 2     | Get mailbox settings (timezone, language), set out-of-office auto-replies                                                                           |
-| **Tasks**       | 5     | List task lists, list tasks, create, update, complete, delete (Microsoft To Do)                                                                     |
-| **Rules**       | 5     | List, create, update, delete inbox rules and change rule execution order                                                                            |
+| **Email**       | 30    | List, search (basic + KQL), read (preview/full), send, reply/forward, delete, mark read/unread, manage drafts, attachments, **shared mailboxes**, **conversation threads**, **message recall**, **distribution lists**, **bulk operations**, **categorize/flag** |
+| **Calendar**    | 33    | List calendars/events, create/update/accept/decline/cancel, **free/busy**, **meeting rooms & room lists**, **calendar groups**, **calendar view (expanded recurring)**, **merged view**, **reminders (snooze/dismiss/set)**, **online meetings (Teams)**, **calendar sharing & permissions** |
+| **Folders**     | 25    | List hierarchy, create/move/rename/delete, **bulk operations (copy/move/delete/mark-read/flag/categorize)**, **folder permissions**, **statistics & search**, **hierarchy management (tree, move, create path, empty, path lookup)** |
+| **Contacts**    | 26    | List/search (advanced filters), create (basic/full), update, delete, **contact folders (CRUD)**, **contact photos**, **contact lists/distribution lists**, **statistics & analytics** |
+| **Mailbox**     | 23    | Settings, out-of-office, **working hours**, **delegates**, **language/region/date/time formats**, **mail tips (auto-reply, mailbox full, delivery restrictions)**, **user profile**, **mailbox usage** |
+| **Tasks**       | 29    | Task lists, tasks, **steps/checklists**, **recurrence patterns**, **attachments**, **linked resources (emails, events)**, **categories (master list + task assignment)** |
+| **Rules**       | 20    | List/create/update/delete, **advanced conditions (13 types) & actions (11 types)**, **rule templates (9 built-in)**, **test rule against email**, **bulk enable/disable**, **import/export (JSON)** |
 | **Auth**        | 3     | OAuth 2.0 with automatic token refresh — authenticate once, use forever                                                                             |
-| **Resources**   | 20    | 13 static resources + 7 resource templates across email, calendar, contacts, folders, mailbox, tasks, rules                                        |
+| **Resources**   | 40    | Static resources + resource templates across email, calendar, contacts, folders, mailbox, tasks, rules                                              |
 | **Prompts**     | 7     | Reusable prompt templates for common Outlook workflows                                                                                              |
 | **Completions** | 9     | Argument completion handlers for folder names, event IDs, contact emails, and more                                                                  |
 
-**55 tools, 20 resources, 7 prompts, 9 completions total.**
+**195 tools, 40 resources, 7 prompts, 9 completions total.**
 
 ---
 
@@ -98,16 +98,18 @@ Go to **API permissions** → **Add a permission** → **Microsoft Graph** → *
 - `Mail.Read`
 - `Mail.ReadWrite`
 - `Mail.Send`
+- `Mail.Read.Shared`
 - `Calendars.Read`
 - `Calendars.ReadWrite`
+- `Calendars.Read.Shared`
 - `Contacts.Read`
 - `Contacts.ReadWrite`
 - `MailboxSettings.Read`
 - `MailboxSettings.ReadWrite`
 - `MailboxFolder.Read`
 - `MailboxFolder.ReadWrite`
-- `Tasks.Read`
 - `Tasks.ReadWrite`
+- `Group.Read.All`
 
 </details>
 
@@ -200,14 +202,20 @@ outlook-auth-server.js    ── standalone OAuth server
 
 auth/                     ── authentication & token management
 email/                    ── list, search, read, send, reply, forward, delete,
-│                            mark-as-read, attachments, drafts
-calendar/                 ── list calendars & events, create, update, accept,
-│                            tentatively-accept, decline, cancel, delete, free-busy
-folder/                   ── list, create, move, rename, delete
-contacts/                 ── list, create (basic/full), update, delete
-mailbox/                  ── settings, out-of-office
-tasks/                    ── task lists and tasks (Microsoft To Do)
-rules/                    ── list, create, update, delete, edit-sequence
+│                            mark-as-read, attachments, drafts,
+│                            shared-mailbox, groups, conversations, recall, kql-search
+calendar/                 ── list, create, accept, decline, cancel, delete,
+│                            sharing, rooms, groups, view, reminders, online-meetings
+folder/                   ── list, create, move, bulk-operations, permissions,
+│                            statistics, hierarchy
+contacts/                 ── list, create, update, delete, folders, photos,
+│                            lists, search
+mailbox/                  ── settings, out-of-office, working-hours,
+│                            delegates, language-region, mail-tips
+tasks/                    ── list, create, update, complete, delete,
+│                            steps, recurrence, attachments, linked-resources, categories
+rules/                    ── list, create, update, delete, edit-sequence,
+│                            advanced, templates
 prompts/                  ── 7 reusable prompt templates
 completion/               ── 9 argument completion handlers
 
