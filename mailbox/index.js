@@ -6,92 +6,9 @@ const { handleGetWorkingHours, handleSetWorkingHours, handleClearWorkingHours } 
 const { handleListDelegates, handleAddDelegate, handleUpdateDelegate, handleRemoveDelegate } = require('./delegates');
 const { handleGetLanguageRegion, handleSetLanguage, handleSetDateFormat, handleSetTimeFormat, handleListLocales, handleListDateFormats, handleListTimeFormats } = require('./language-region');
 const { handleGetMailTips, handleGetMailboxUsage, handleGetUserProfile } = require('./mail-tips');
+const { handleGetMailboxSettings } = require('./settings');
+const { handleSetOutOfOffice } = require('./out-of-office');
 const { z } = require('zod');
-
-async function handleGetMailboxSettings(_args) {
-  try {
-    const client = await getGraphClient();
-    const settings = await client.api('me/mailboxSettings').get();
-
-    const structured = {
-      timezone: settings.timeZone,
-      language: settings.language?.displayName || null,
-      dateFormat: settings.dateFormat || null,
-      timeFormat: settings.timeFormat || null,
-      automaticReplies: {
-        status: settings.automaticRepliesSetting?.status,
-        scheduledStart: settings.automaticRepliesSetting?.scheduledStartDateTime?.dateTime || null,
-        scheduledEnd: settings.automaticRepliesSetting?.scheduledEndDateTime?.dateTime || null,
-        internalMessage: settings.automaticRepliesSetting?.internalReplyMessage || null,
-        externalMessage: settings.automaticRepliesSetting?.externalReplyMessage || null,
-      },
-    };
-
-    const ars = structured.automaticReplies;
-    const textFallback = [
-      `Timezone: ${structured.timezone}`,
-      `Language: ${structured.language || 'not set'}`,
-      `Auto-replies: ${ars.status}`,
-      ars.scheduledStart ? `  From: ${ars.scheduledStart}` : '',
-      ars.scheduledEnd ? `  To:   ${ars.scheduledEnd}` : '',
-      ars.internalMessage ? `  Internal: ${ars.internalMessage}` : '',
-      ars.externalMessage ? `  External: ${ars.externalMessage}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n');
-
-    return makeResponse(formatResponse(structured, textFallback));
-  } catch (error) {
-    if (isAuthError(error)) {
-      return makeErrorResponse(error.message);
-    }
-    return makeErrorResponse(`Error fetching mailbox settings: ${error.message}`);
-  }
-}
-
-async function handleSetOutOfOffice(_args) {
-  const { status, internalMessage, externalMessage, startTime, endTime } = _args;
-
-  if (!status) {
-    return makeErrorResponse('status is required: "enabled", "scheduled", or "disabled".');
-  }
-
-  const validStatuses = ['enabled', 'scheduled', 'disabled'];
-  if (!validStatuses.includes(status)) {
-    return makeErrorResponse(`Invalid status. Use one of: ${validStatuses.join(', ')}.`);
-  }
-
-  if (status === 'scheduled' && (!startTime || !endTime)) {
-    return makeErrorResponse('startTime and endTime are required when status is "scheduled".');
-  }
-
-  try {
-    const client = await getGraphClient();
-
-    const automaticRepliesSetting = { status };
-    if (internalMessage !== undefined) {
-      automaticRepliesSetting.internalReplyMessage = internalMessage;
-    }
-    if (externalMessage !== undefined) {
-      automaticRepliesSetting.externalReplyMessage = externalMessage;
-    }
-    if (startTime) {
-      automaticRepliesSetting.scheduledStartDateTime = { dateTime: startTime, timeZone: 'UTC' };
-    }
-    if (endTime) {
-      automaticRepliesSetting.scheduledEndDateTime = { dateTime: endTime, timeZone: 'UTC' };
-    }
-
-    await client.api('me/mailboxSettings').patch({ automaticRepliesSetting });
-
-    return makeResponse(`Out-of-office set to "${status}" successfully.`);
-  } catch (error) {
-    if (isAuthError(error)) {
-      return makeErrorResponse(error.message);
-    }
-    return makeErrorResponse(`Error setting out-of-office: ${error.message}`);
-  }
-}
 
 /**
  * Register mailbox tools with the MCP server
